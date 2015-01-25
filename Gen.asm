@@ -1,0 +1,42 @@
+
+profile = true
+
+; Gen (hl = src, bc = length)
+;
+Gen             proc
+
+                push hl
+                ld hl, (CodePtr)
+                push hl
+                add hl, bc
+                ld de, (CodeTop)
+                and a
+                sbc hl, de
+                jp nc, outOfMemory
+                pop de
+                pop hl
+                ldir
+                ld (CodePtr), de
+                ret
+
+outOfMemory     halt
+                ret
+
+                endp
+
+GenRet          ld hl, (CodePtr)
+                ld (hl), $c9            ; $c9 = 'ret'
+                inc hl
+                ld (CodePtr), hl
+                ret
+
+ResetGen        ld hl, (CodeBase)
+                ld (CodePtr), hl
+                ret
+
+CodeBase        dw $e000
+CodePtr         dw $e000
+CodeTop         dw $f000
+
+profile = false
+
