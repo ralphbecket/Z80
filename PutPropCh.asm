@@ -20,10 +20,10 @@ PutPropCh       proc
                 add hl, hl
                 add hl, hl
                 ld de, (PropCharSet)
-                dec d               ; Chars 0..31 are non-printing.
+                dec d               ; Ch 0 - 31 are non-printing.
                 add hl, de          ; hl = ptr to [row0 + width][row1]...[row7].
                 ld a, (hl)
-                and $03
+                and $07
                 inc a
                 ld b, a             ; a, b = ch width in px.
                 push hl
@@ -105,15 +105,15 @@ prepNextRow     inc ix
                 ld l, (ix+0)
                 inc d
                 ld a, d
-                and $03
+                and $07
                 jr nz, drawBitmap
 
                 ret
 
                 endp
 
-PropCharSet     dw 0
+PropCharSet     dw PropChars
 PutPropX        db 0
-PutAttrPtr      dw 0
-PutAttr         db 0
+PutAttrPtr      dw $5800
+PutAttr         db %10111000
 PutNL           ret
