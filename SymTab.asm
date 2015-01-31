@@ -11,13 +11,9 @@
 ; or the pointer to the field which should be filled in with
 ; the new cell, should one be allocated.
 
-profile = true
-
-; FindSym (hl = chain ptr, de = str; if flags.z then hl = cell else hl = list end ptr)
+; FindSym (hl = symtab ptr, de = str; if flags.z then hl = cell else hl = list end ptr, abcde = xxxxx)
 ;
-FindSym         proc
-
-                ld (idPtr), de
+FindSym         ld (symTabIDPtr), de
                 ex de, hl
 
                 xor a                   ; Compute the str hash.
@@ -57,7 +53,7 @@ searchChainLp   ld e, (hl)
 
                 push de                 ; Push type field ptr.
 
-                ld de, (idPtr)
+                ld de, (symTabIDPtr)
 
 cmpStr          ld a, (de)
                 or a
@@ -81,24 +77,94 @@ found           pop hl                  ; hl = type field ptr.
 notFound        inc a                   ; hl = null cell ptr ptr.
                 ret                     ; nz for failure.
 
-idPtr           dw 0
+; AddEntry (hl = ptr to fill in with new cell, bc = ptr to ID, a = type, de = data; abcdehl = xxxxxxx).
+;
+AddEntry        push de
+                push af
+                push bc
+                push hl
+                call Alloc
+                ex de, hl
+                pop hl
+                ld (hl), e              ; Fill in ptr to new cell.
+                inc hl
+                ld (hl), d
+                ex de, hl
+                pop bc
+                ld (hl), c              ; Fill in id ptr field.
+                inc hl
+                ld (hl), b
+                inc hl
+                pop af
+                ld (hl), a              ; Fill in type field.
+                inc hl
+                pop de
+                ld (hl), e              ; Fill in data field.
+                inc hl
+                ld (hl), d
+                inc hl
+                xor a
+                ld (hl), a              ; Zero next cell ptr field.
+                inc hl
+                ld (hl), a
+                ret
 
-                endp
-
-ResetSymTabs    ld hl, GlobalSymTab
+ResetSymTabs    ld hl, GlobalSymTab     ; XXX Should free entries from symtab.
                 ld (hl), 0
                 ld de, GlobalSymTab + 1
                 ld bc, 255
                 ldir
 
-ResetLocals     ld hl, LocalSymTab
+                ; Add the keywords to the global symtab.
+
+                ld de, KwIf
+                ld a, TokIf
+                call addKw
+                ld de, KwEnd
+                ld a, TokEnd
+                call addKw
+                ld de, KwGoto
+                ld a, TokGoto
+                call addKw
+                ld de, KwElse
+                ld a, TokElse
+                call addKw
+                ld de, KwElif
+                ld a, TokElif
+                call addKw
+                ld de, KwFun
+                ld a, TokFun
+                call addKw
+                ld de, KwRet
+                ld a, TokRet
+                call addKw
+                ld de, KwInt
+                ld a, TypeInt
+                call addKw
+                ld de, KwInts
+                ld a, TypeInts
+                call addKw
+                ld de, KwStr
+                ld a, TypeStr
+                call addKw
+                ld de, KwStrs
+                ld a, TypeStrs
+                call addKw
+
+ResetLocals     ld hl, LocalSymTab      ; XXX Should free entries from symtab.
                 ld (hl), 0
                 ld de, LocalSymTab + 1
                 ld bc, 255
                 ldir
                 ret
 
-profile = false
+addKw           ld hl, GlobalSymTab
+                push de
+                push af
+                call FindSym
+                pop af
+                pop bc
+                ld de, 0
+                jp AddEntry
 
-GlobalSymTab    ds 256
-LocalSymTab     ds 256
+

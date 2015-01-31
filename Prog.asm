@@ -1,33 +1,49 @@
 ; This is where we parse and compile the program.
+;
+; We deal with scope by pushing any needed data followed by a
+; handler address on the stack.  The a register
+; is assigned the reason for a scope being closed so the scope
+; handler can decide what to do.
 
 ResetProg       call ResetHeap
                 call ResetScan
                 call ResetGen
                 call ResetSymTabs
+                ld hl, pEndProg
+                push hl
                 ret
 
-Prog            proc
-
-                call Scan
-                cp TokEOF
-                ret z
+Prog            call Scan
                 cp TokNewID
-                jp z, newAssgtOrCall
+                jp z, pNewID
+                cp TokID
+                jp z, pID
+                cp TokEOF
+                jp z, pEnd
 
                 halt ; Prog syntax error!
 
-newAssgtOrCall  ld (newEntryPtr), hl    ; We just read a TokNewID.
+pEnd            pop hl
+                jp (hl)
+
+pEndProg        cp TokEOF
+                jp nz, pEndProgError
+                ret
+
+pEndProgError   halt ; Unexpected EOF.
+
+pNewID          ld (newEntryPtr), hl    ; This is a new assignment or a new call.
                 ld hl, (ScannedIDStart)
                 ld (newIDStart), hl
 
                 call Scan
                 cp '='
-                jp z, newAssgt
+                jp z, pNewAssgt
                 ; cp '('
-                ; jp z, fwdCall
+                ; jp z, pNewCall
                 halt ; Expected '=' in new var assignment or '(' in fwd call.
 
-newAssgt        call Expr
+pNewAssgt       call Expr
                 ld (newVarType), a
 
                 ld hl, newVarCode
@@ -42,35 +58,11 @@ newAssgt        call Expr
                 ld bc, varAssgtLength
                 call Gen
 
-                call Alloc              ; hl = new entry.
-
-                ld de, (newEntryPtr)    ; Set up the sym tab pointer to the new entry.
-                ex de, hl
-                ld (hl), e
-                inc hl
-                ld (hl), d
-                ex de, hl
-
-                ld de, (newIDStart)     ; Set the name field of the var entry.
-                ld (hl), e
-                inc hl
-                ld (hl), d
-                inc hl
-
-                ld a, (newVarType)      ; Set the type field of the var entry.
-                ld (hl), a
-                inc hl
-
-                ld de, (newVarPtr)      ; Set the addr field of the var entry.
-                ld (hl), e
-                inc hl
-                ld (hl), d
-                inc hl
-
-                xor a                   ; Set the next entry field to 0.
-                ld (hl), a
-                inc hl
-                ld (hl), a
+                ld hl, (newEntryPtr)
+                ld bc, (newIDStart)
+                ld a, (newVarType)
+                ld de, (newVarPtr)
+                call AddEntry
 
                 jp Prog
 
@@ -90,13 +82,81 @@ newVarCode      jr newVarCodeEnd
 newVarCodeEnd   nop
 newVarLength    equ newVarCodeEnd - newVarCode
 
-varAssgtCode ld (0), hl
-varAssgtLength equ * - varAssgtCode
+varAssgtCode    ld (0), hl
+varAssgtLength  equ * - varAssgtCode
 
-newEntryPtr     dw 0
-newIDStart      dw 0
-newIDEnd        dw 0
-newVarPtr       dw 0
-newVarType      db 0
+pID             ld a, (hl)
+                cp TypeInt
+                jp z, pAssgt
+                cp TypeInts
+                jp z, pAssgt
+                cp TypeStr
+                jp z, pAssgt
+                cp TypeStrs
+                jp z, pAssgt
+                cp TokIf
+                jp z, pIf
+                cp TokElif
+                jp z, pElif
+                cp TokElse
+                jp z, pElse
+                cp TokEnd
+                jp z, pEnd
+                halt                    ; Unknown keyword!
 
-                endp
+pAssgt          push hl                 ; Save the assignment target details.
+                call Scan
+                cp '='
+                jp nz, pExpectedEq
+                call Expr
+                pop hl                  ; Restore the assignment target details.
+                cp (hl)                 ; Check the types match.
+                jp nz, pAssgtTypeError
+                inc hl
+                ld e, (hl)
+                inc hl
+                ld d, (hl)
+                ld (varAssgtCode + 1), de
+                ld hl, varAssgtCode
+                ld bc, varAssgtLength
+                call Gen
+                jp Prog
+
+pExpectedEq     halt                    ; Expected an assignment.
+
+pAssgtTypeError halt
+
+pIf             call Expr
+                cp TypeInt
+                jp nz, pIfCondTypeError
+                ld hl, ifCode
+                ld bc, ifLength
+                call Gen
+                dec de
+                dec de                  ; de = ptr to if false jp tgt.
+                push de
+                ld de, pCloseIf
+                push de
+                jp Prog
+
+pIfCondTypeError halt
+
+ifCode          ld a, h
+                or l
+                jp z, 0
+ifLength        equ * - ifCode
+
+pCloseIf        cp TokEnd
+                jp nz, pUnclosedIf
+                ld de, (CodePtr)
+                pop hl                  ; hl = ptr to if false jp tgt.
+                ld (hl), e
+                inc hl
+                ld (hl), d
+                jp Prog
+
+pUnclosedIf     halt
+
+pElif           halt
+pElse           halt
+

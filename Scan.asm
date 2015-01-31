@@ -1,19 +1,18 @@
 ; This implementation uses a character-properties table.
 
-Scan            proc
-
-profile = true
-
-                ld a, (haveSavedTok)
+Scan            ld a, (haveSavedTok)
                 and a
                 jp z, scanTok
 
                 xor a                   ; We have a "saved" token (via UnScan).
                 ld (haveSavedTok), a
                 ld a, (savedTok)
+                cp TokNewID
+                jp z, lookupID          ; This may have been added since last time.
+                ld hl, (savedTokEntry)
                 ret
 
-scanTok         ld hl, CharProps
+scanTok         ld hl, ScanCharProps
                 ld d, 0
                 ld bc, (NextChPtr)
 lp              ld a, (bc)
@@ -30,6 +29,7 @@ lp              ld a, (bc)
 dispatch        jr *                    ; SMC!
 dispatchFrom    equ *
 
+                endp
 skipWS          equ lp - dispatchFrom   ; Jump backwards!
 
 retCh           equ * - dispatchFrom
@@ -113,7 +113,7 @@ idLp            inc bc
                 ld (ScannedIDEnd), bc
                 ld (NextChPtr), bc
 
-                ld hl, (ScannedIDEnd)
+lookupID        ld hl, (ScannedIDEnd)
                 ld a, (hl)
                 ld (scannedIDLastCh), a
                 ld (hl), 0
@@ -131,111 +131,8 @@ idLp            inc bc
 notASCII        di
                 halt ; This isn't plain ASCII!
 
-profile = false
-
-CharProps       db retCh                ; 0 = EOF.
-                loop 32                 ; $01..$20 are whitespace.
-                db skipWS
-                endl
-                db maybeNE              ; ! or !=
-                db retCh                ; "
-                db retCh                ; #
-                db retCh                ; $
-                db retCh                ; %
-                db maybeAndAlso         ; & or &&
-                db retCh                ; '
-                db retCh                ; (
-                db retCh                ; )
-                db retCh                ; *
-                db retCh                ; +
-                db retCh                ; ,
-                db retCh                ; -
-                db retCh                ; .
-                db retCh                ; /
-                db isDigit              ; 0
-                db isDigit              ; 1
-                db isDigit              ; 2
-                db isDigit              ; 3
-                db isDigit              ; 4
-                db isDigit              ; 5
-                db isDigit              ; 6
-                db isDigit              ; 7
-                db isDigit              ; 9
-                db isDigit              ; 9
-                db retCh                ; :
-                db retCh                ; ;
-                db maybeLE              ; < or <=
-                db retCh                ; =
-                db maybeGE              ; > or >=
-                db retCh                ; ?
-                db retCh                ; @
-                db isAlpha              ; A
-                db isAlpha              ; B
-                db isAlpha              ; C
-                db isAlpha              ; D
-                db isAlpha              ; E
-                db isAlpha              ; F
-                db isAlpha              ; G
-                db isAlpha              ; H
-                db isAlpha              ; I
-                db isAlpha              ; J
-                db isAlpha              ; K
-                db isAlpha              ; L
-                db isAlpha              ; M
-                db isAlpha              ; N
-                db isAlpha              ; O
-                db isAlpha              ; P
-                db isAlpha              ; Q
-                db isAlpha              ; R
-                db isAlpha              ; S
-                db isAlpha              ; T
-                db isAlpha              ; U
-                db isAlpha              ; V
-                db isAlpha              ; W
-                db isAlpha              ; X
-                db isAlpha              ; Y
-                db isAlpha              ; Z
-                db retCh                ; [
-                db retCh                ; \
-                db retCh                ; ]
-                db retCh                ; ^
-                db isAlpha              ; _
-                db retCh                ; `
-                db isAlpha              ; a
-                db isAlpha              ; b
-                db isAlpha              ; c
-                db isAlpha              ; d
-                db isAlpha              ; e
-                db isAlpha              ; f
-                db isAlpha              ; g
-                db isAlpha              ; h
-                db isAlpha              ; i
-                db isAlpha              ; j
-                db isAlpha              ; k
-                db isAlpha              ; l
-                db isAlpha              ; m
-                db isAlpha              ; n
-                db isAlpha              ; o
-                db isAlpha              ; p
-                db isAlpha              ; q
-                db isAlpha              ; r
-                db isAlpha              ; s
-                db isAlpha              ; t
-                db isAlpha              ; u
-                db isAlpha              ; v
-                db isAlpha              ; w
-                db isAlpha              ; x
-                db isAlpha              ; y
-                db isAlpha              ; z
-                db retCh                ; {
-                db maybeOrElse          ; |
-                db retCh                ; }
-                db retCh                ; ~
-                db skipWS               ; DEL
-
-                endp
-
 UnScan          ld (savedTok), a
+                ld (savedTokEntry), hl
                 ld a, 1
                 ld (haveSavedTok), a
                 ret
@@ -255,7 +152,7 @@ PutTok          proc
                 call PutCh
                 ld hl, tokNames
 
-lp              ld a, (hl)
+chkTokLp        ld a, (hl)
                 inc hl
 rememberTok     cp 0                    ; SMC!
                 jp z, found
@@ -267,7 +164,7 @@ skipName        ld a, (hl)
                 and a
                 jp nz, skipName
 
-                jp lp
+                jp chkTokLp
 
 notFound        ld a, (rememberTok + 1)
                 call PutCh              ; This is a 'stands for itself' token.
@@ -296,8 +193,6 @@ finish          ld a, ']'
                 call PutCh
                 ret
 
-                endp
-
 tokNames        db 0, "EOF", 0
                 db TokAndAlso, "&&", 0
                 db TokOrElse, "||", 0
@@ -308,41 +203,10 @@ tokNames        db 0, "EOF", 0
                 db TokNewID, "id ", 0
                 db $ff
 
+                endp
+
                 endif                   ; ---- END OF DEBUGGING CODE ----
 
-; We 'reuse' some of the char codes which do not stand for
-; themselves here to represent other tokens.
 
-TypeInt         equ $01                 ; There cannot be a type code 0!
-TypeStr         equ $02
-TypeArray       equ $08
-TypeInts        equ TypeInt + TypeArray
-TypeStrs        equ TypeStr + TypeArray
-NonTypeBits     equ $f0
-TypeLabel       equ $ff
-TypeFunc        equ $fe
-TypeProc        equ $fd
-TypeVoid        equ $fc
 
-TokEOF          equ $00
-TokAndAlso      equ $81                 ; &&
-TokOrElse       equ $82                 ; ||
-TokLE           equ $83                 ; <=
-TokGE           equ $84                 ; >=
-TokNE           equ $85                 ; !=
-TokNewID        equ $86
-TokID           equ $87
-TokInt          equ TypeInt
-TokInts         equ TypeInts
-TokStr          equ TypeStr
-TokStrs         equ TypeStrs
-
-scannedIDLastCh db 0                    ; Temp. when zeroing end of ID for symtab lookup.
-haveSavedTok    db 0                    ; Non-zero when we have a saved token to serve.
-savedTok        db 0                    ; The saved token, if any.
-
-NextChPtr       dw 0                    ; Ptr to the next source char to read.
-ScannedInt      dw 0                    ; The scanned int.
-ScannedIDStart  dw 0                    ; Ptr to first char of scanned ID.
-ScannedIDEnd    dw 0                    ; Ptr to one past last char of scanned ID.
 

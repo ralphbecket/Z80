@@ -4,9 +4,9 @@
 ; a pointer to the next free cell or 0 if this is the last cell in the
 ; chain.
 
-Alloc           proc
-
-                ld hl, (FreeList)
+; Alloc (- ; hl = ptr to new cell, ade = xxx)
+;
+Alloc           ld hl, (FreeList)
 
                 ld a, h
                 or l
@@ -31,16 +31,10 @@ allocNew        ld hl, (FreeReached)
                 pop hl
                 ret c                   ; The heap is not exhausted!
                 halt                    ; The heap is exhausted!
-                ret ; Dummy!
 
-                endp
-
+; ResetHeap )
+;
 ResetHeap       ld hl, (FreeBase)
                 ld (FreeReached), hl
                 ret
 
-FreeBase        dw $d000                ; The lowest address which can contain cells.
-FreeTop         dw $e000                ; One above the highest address containing cells.
-FreeReached     dw $d000                ; The lowest used address in the cell heap.
-FreeList        dw 0                    ; The first free cell in the free list.
-CellSize        equ 7                   ; Src id ptr, type byte, var ptr, next ptr.

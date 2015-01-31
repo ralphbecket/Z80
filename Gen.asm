@@ -1,7 +1,5 @@
 
-profile = true
-
-; Gen (hl = src, bc = length)
+; Gen (hl = src, bc = length; de = ptr to code byte after addition)
 ;
 Gen             proc
 
@@ -33,10 +31,4 @@ GenRet          ld hl, (CodePtr)
 ResetGen        ld hl, (CodeBase)
                 ld (CodePtr), hl
                 ret
-
-CodeBase        dw $e000
-CodePtr         dw $e000
-CodeTop         dw $f000
-
-profile = false
 

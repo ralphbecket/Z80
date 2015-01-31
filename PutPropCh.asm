@@ -13,6 +13,7 @@
 PutPropCh       proc
 
                 ; XXX Handle NL, non-printing chars, etc.
+                sub 32
 
                 ld h, 0             ; Calc the char data addr.
                 ld l, a
@@ -20,11 +21,10 @@ PutPropCh       proc
                 add hl, hl
                 add hl, hl
                 ld de, (PropCharSet)
-                dec d               ; Ch 0 - 31 are non-printing.
                 add hl, de          ; hl = ptr to [row0 + width][row1]...[row7].
                 ld a, (hl)
                 and $07
-                inc a
+                ;inc a
                 ld b, a             ; a, b = ch width in px.
                 push hl
                 pop ix              ; ix = ptr to [row0 + width][row1]...[row7].
@@ -44,7 +44,7 @@ checkSpace      ld hl, PutPropX
 
 calcShift       sub b
                 cpl
-                and $03
+                and $07
                 inc a               ; a = # px to shift left (always +ve).
                 cp b
                 ld b, a             ; b = # px to shift left (always +ve).
@@ -68,6 +68,7 @@ drawAttrs       ld hl, (PutAttrPtr)
                 inc hl              ; Fill in right attr.
                 ld (hl), a
                 ld (PutAttrPtr), hl
+                dec hl
 
 calcDispPtr     ld a, h             ; Convert hl from attr ptr to disp ptr.
                 and $03
@@ -115,5 +116,8 @@ prepNextRow     inc ix
 PropCharSet     dw PropChars
 PutPropX        db 0
 PutAttrPtr      dw $5800
-PutAttr         db %10111000
+PutAttr         db %10110001
 PutNL           ret
+
+                include "PropChars.asm"
+

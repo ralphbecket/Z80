@@ -1,42 +1,3 @@
-
-DispFile        equ $4000
-AttrFile        equ $5800
-BlackInk        equ 0
-BlackPaper      equ 0 * 8
-BlueInk         equ 1
-BluePaper       equ 1 * 8
-RedInk          equ 2
-RedPaper        equ 2 * 8
-MagentaInk      equ 3
-MagentaPaper    equ 3 * 8
-GreenInk        equ 4
-GreenPaper      equ 4 * 8
-CyanInk         equ 5
-CyanPaper       equ 5 * 8
-YellowInk       equ 6
-YellowPaper     equ 6 * 8
-WhiteInk        equ 7
-WhitePaper      equ 7 * 8
-Bright          equ %01000000
-Flash           equ %10000000
-RomChars        equ $3c00
-
-MakeGap         macro(n)
-
-                loop n
-                db 0
-                endl
-
-                endm
-
-AlignmentGap    macro(n)
-
-                while * mod n <> 0
-                db 0
-                endw
-
-                endm
-
 ; PutC(a = char)
 ;
 PutCh           proc
@@ -332,15 +293,5 @@ GetBlankPAttr   proc
                 ret
 
                 endp
-
-if usePropChars
-                include "PropChars.asm"
-
-CharSet         dw PropChars - 256
-else
-CharSet         dw RomChars
-endif
-PutAttrPtr      dw AttrFile
-PutAttr         db Bright + BlackInk + WhitePaper
 
 

@@ -20,8 +20,6 @@
 ; of Kind{Con,Var,Stk,HL} -- the kind information is needed to
 ; generate efficient code.
 
-profile = true
-
 Expr            ld hl, 0                ; Initialise the stack etc.
                 ld (kindHLPtr), hl
                 push hl                 ; Dummy [type, kind].
@@ -310,21 +308,6 @@ pushIntValue    push hl
 
                 ;endp
 
-KindHL          equ 0                   ; Value is "in" the HL register.
-KindCon         equ 1                   ; Constant.
-KindVar         equ 2                   ; Variable.
-KindStk         equ 3                   ; Value is "on" the stack.
-
-newBinOp        dw 0                    ; Temporary note of the new operator to be pushed.
-kindHLPtr       dw 0                    ; 0 or the address of the KindHL entry on the stack.
-binOpLValue     dw 0
-binOpLTypeKind  equ *
-binOpLKind      db 0
-binOpLType      db 0
-binOpRValue     dw 0
-binOpRTypeKind  equ *
-binOpRKind      db 0
-binOpRType      db 0
 
 ; The operator tables.  Each operator table should appear in address order from most to
 ; least tightly binding.  Each table is a sequence of [(left type, right type) pair, kind map]
@@ -691,4 +674,3 @@ dbgEPushBinOp           db "push binop ", 0
 dbgECompiling           db "compiling ", 0
 dbgECompilingPrevOp     db "compiling previous op", 0
 
-profile = false

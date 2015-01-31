@@ -6,14 +6,16 @@ debug           equ true
 usePropChars    equ false
 
 Start           call Cls
-                ld hl, testProg0: call runTest
-                ld hl, testProg1: call runTest
-                ld hl, testProg2: call runTest
-                ld hl, testProg3: call runTest
-                ld hl, testProg4: call runTest
-                ld hl, testProg5: call runTest
-                ld hl, testProg6: call runTest
-                ld hl, theQuickEtc: call PutStrNL
+                ;ld hl, testProg0: call runTest
+                ;ld hl, testProg1: call runTest
+                ;ld hl, testProg2: call runTest
+                ;ld hl, testProg3: call runTest
+                ;ld hl, testProg4: call runTest
+                ;ld hl, testProg5: call runTest
+                ;ld hl, testProg6: call runTest
+                ld hl, testProg7: call runTest
+                ld hl, testProg8: call runTest
+                ;ld hl, theQuickEtc: call PutStrNL
                 halt ; test complete!
 
 runTest         ld (NextChPtr), hl
@@ -37,6 +39,8 @@ testProg3       db "x = 1 y = x + 1", 0
 testProg4       db "x = 1 y = 2 + x", 0
 testProg5       db "x = 1 y = x + 5 - 3 + x", 0
 testProg6       db "x = 1 + (3 - 2)", 0
+testProg7       db "x = 1 x = x + 1", 0
+testProg8       db "x = 1 y = 2 x = x + y", 0
 
 theQuickEtc     db "The Quick, Brown Fox Jumps Over The Lazy Dog.", 0
 
@@ -47,4 +51,6 @@ theQuickEtc     db "The Quick, Brown Fox Jumps Over The Lazy Dog.", 0
                 include "Puts.asm"
                 include "SymTab.asm"
                 include "Cells.asm"
+                include "Vars.asm"
+                include "Consts.asm"
 
