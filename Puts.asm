@@ -5,9 +5,9 @@ PutCh           proc
                 cp 13
                 jr z, PutNL
 
-                cp 32
+                sub 32
                 jr nc, charOK
-                ld a, '?'
+                ld a, '?' - 32
 charOK          push af                 ; Save the char.
 
                 call MaybeScroll

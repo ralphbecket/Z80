@@ -15,7 +15,7 @@ CodeTop         dw $f000
 
 
 if usePropChars
-CharSet         dw PropChars - 256
+CharSet         dw PropChars
 else
 CharSet         dw RomChars
 endif

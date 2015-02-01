@@ -169,7 +169,7 @@ WhiteInk        equ 7
 WhitePaper      equ 7 * 8
 Bright          equ %01000000
 Flash           equ %10000000
-RomChars        equ $3c00
+RomChars        equ $3d00
 
 KindHL          equ 0                   ; Value is "in" the HL register.
 KindCon         equ 1                   ; Constant.

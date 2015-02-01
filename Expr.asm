@@ -649,28 +649,23 @@ eqStkHLLength   equ * - eqStkHLCode
 
 hlToBoolCode    ld a, h                 ; Convert hl to 1 if non-zero.
                 or l
-                sub 1
-                ld a, 0
-                ld h, a
-                adc a, a
-                xor $01
-                ld l, a
-hlToBoolLength  equ * - hlToBoolCode
-                ret                     ; So we can use the above as a routine.
+                ld hl, 1
+                jr nz, hlToBoolDone
+                dec hl
+hlToBoolDone    ret                     ; So we can call this as well!
+hlToBoolLength  equ hlToBoolDone - hlToBoolCode
 
 genHLToBool     ld hl, hlToBoolCode
                 ld bc, hlToBoolLength
                 jp Gen
 
-hlToInvBoolCode ld a, h                 ; Convert hl to 0 if non-zero, 1 otherwise.
+hlToInvBoolCode ld a, h                 ; Convert hl to 1 if non-zero.
                 or l
-                sub 1
-                ld a, 0
-                ld h, a
-                adc a, a
-                ld l, a
-hlToInvBoolLength  equ * - hlToInvBoolCode
-                ret                     ; So we can use the above as a routine.
+                ld hl, 1
+                jr z, hlToInvBoolDone
+                dec hl
+hlToInvBoolDone ret                     ; So we can call this as well!
+hlToInvBoolLength  equ hlToInvBoolDone - hlToInvBoolCode
 
 genHLToInvBool  ld hl, hlToInvBoolCode
                 ld bc, hlToInvBoolLength

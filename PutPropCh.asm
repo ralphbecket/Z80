@@ -130,7 +130,7 @@ notAtRowEnd     and $07
 PropCharSet     dw PropChars
 PutPropX        db 0
 PutAttrPtr      dw $5800
-PutAttr         db %01110001
+PutAttr         db %01111000
 PutNL           ret
 
                 include "PropChars.asm"

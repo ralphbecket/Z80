@@ -4,7 +4,7 @@
 
 Start           ld hl, theQuickEtc
                 call PutStr
-                ld hl, kBrownEtc
+                ld hl, theQuickEtc
                 call PutStr
                 halt
 
@@ -17,8 +17,9 @@ PutStr          ld a, (hl)
                 pop hl
                 jp PutStr
 
-theQuickEtc     db "The quic", 0
-kBrownEtc       db "k brown fox jumps over the lazy dog.", 0
+theQuickEtc     db "The quick brown fox jumps over the lazy dog.  "
+                db "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.  "
+                db "3.141592768  e^(i * pi) = -1", 0
 
                 include "PutPropCh.asm"
 
