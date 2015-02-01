@@ -53,14 +53,6 @@ eInt            ld d, TypeInt           ; Push int constant value.
                 ld e, KindCon
                 push de
                 push hl
-
-                        push hl
-                        ld hl, dbgEInt
-                        call PutStr
-                        pop hl
-                        call PutInt
-                        call PutNL
-
                 jp eCont
 
 eID             ld a, (hl)
@@ -75,10 +67,6 @@ eID             ld a, (hl)
                 inc hl
                 ld d, (hl)
                 push de
-
-                        ld hl, dbgEVar
-                        call PutStrNL
-
                 jp eCont
 
 eNonVarID       halt ; XXX Need to consider functions here.
@@ -92,10 +80,6 @@ eNeg            ld hl, 0                ; Push unop dummy value.
                 push hl
                 ld hl, negTbl
                 push hl
-
-                        ld hl, dbgENeg
-                        call PutStr
-
                 jp eReentry
 
 eNot            ld hl, 0                ; Push unop dummy value.
@@ -103,10 +87,6 @@ eNot            ld hl, 0                ; Push unop dummy value.
                 push hl
                 ld hl, notTbl
                 push hl
-
-                        ld hl, dbgENeg
-                        call PutStr
-
                 jp eReentry
 
 eComplement     ld hl, 0                ; Push unop dummy value.
@@ -114,10 +94,6 @@ eComplement     ld hl, 0                ; Push unop dummy value.
                 push hl
                 ld hl, complementTbl
                 push hl
-
-                        ld hl, dbgENeg
-                        call PutStr
-
                 jp eReentry
 
 eLPar           ld hl, 0                ; Push unop dummy value.
@@ -125,10 +101,6 @@ eLPar           ld hl, 0                ; Push unop dummy value.
                 push hl
                 ld hl, lparTbl
                 push hl
-
-                        ld hl, dbgELPar
-                        call PutStr
-
                 jp eReentry
 
 ; ... XXX other prefix unops ...
@@ -140,32 +112,24 @@ eCont           call Scan
                 jp z, eAdd
                 cp ')'
                 jp z, eRPar
+                cp '='
+                jp z, eEQ
                 ; ... XXX other infix binops ...
 
                 call UnScan
-
-                        ld hl, dbgEReachedEnd
-                        call PutStr
-
                 ld hl, $ffff            ; Pushing this will tie the knot.
                 jp pushBinOp
 
-eSub                    ld hl, dbgESub
-                        call PutStr
-
-                ld hl, subTbl
+eSub            ld hl, subTbl
                 jp pushBinOp
 
-eAdd                    ld hl, dbgEAdd
-                        call PutStr
-
-                ld hl, addTbl
+eAdd            ld hl, addTbl
                 jp pushBinOp
 
-eRPar                   ld hl, dbgERPar
-                        call PutStr
+eRPar           ld hl, rparTbl
+                jp pushBinOp
 
-                ld hl, rparTbl
+eEQ             ld hl, eqTbl
                 jp pushBinOp
 
 ; ... XXX other infix binops ...
@@ -196,9 +160,6 @@ pushBinOpLp     inc sp                  ; Skip the top value and its type/kind.
                 jp c, pushNewBinOp
 
                 ; The prev op binds no less tightly - we must pop it and compile it.
-
-                        ld hl, dbgECompilingPrevOp
-                        call PutStrNL
 
                 pop hl
                 ld (binOpRValue), hl
@@ -270,10 +231,6 @@ pushNewBinOp    add hl, de              ; The prev op binds less tightly.
                 jp eReentry
 
 eDone           call UnScan             ; "UnScan" the last token.
-
-                        ld hl, dbgEReachedEnd
-                        call PutStrNL
-
                 ld hl, doneTbl          ; Tie the knot.
                 jp pushBinOp
 
@@ -305,9 +262,6 @@ pushIntTyKy     push de
                 ld (kindHLPtr), sp
 pushIntValue    push hl
                 jp eRetryOpPush
-
-                ;endp
-
 
 ; The operator tables.  Each operator table should appear in address order from most to
 ; least tightly binding.  Each table is a sequence of [(left type, right type) pair, kind map]
@@ -395,7 +349,7 @@ addHLVar        ld (addHLVarCode + 2), de
 
 addHLVarCode    ld de, (0)
                 add hl, de
-addHLVarLength  equ * - addHLConCode
+addHLVarLength  equ * - addHLVarCode
 
 addConHL        ld d, b
                 ld e, c
@@ -494,7 +448,7 @@ subHLVar        ld (subHLVarCode + 2), de
 subHLVarCode    ld de, (0)
                 and a
                 sbc hl, de
-subHLVarLength  equ * - subHLConCode
+subHLVarLength  equ * - subHLVarCode
 
 subConHL        ld (subConHLCode + 1), bc
                 ld hl, subConHLCode
@@ -584,6 +538,144 @@ subStkHLCode    pop de
                 sbc hl, de
 subStkHLLength  equ * - subStkHLCode
 
+eqTbl           db $10 * TypeInt + TypeInt
+                dw eqHLHL,  eqHLCon,  eqHLVar,  eqHLStk
+                dw eqConHL, eqConCon, eqConVar, eqConStk
+                dw eqVarHL, eqVarCon, eqVarVar, eqVarStk
+                dw eqStkHL, eqStkCon, eqStkVar, eqStkStk
+                db 0
+
+eqHLHL:
+eqHLStk:
+eqConStk:
+eqVarStk:
+eqStkCon:
+eqStkVar:
+eqStkStk:
+                halt ; eq kind error!
+
+eqHLCon         ld (eqHLConCode + 1), de
+                ld hl, eqHLConCode
+                ld bc, eqHLConLength
+                call Gen
+                call genHLToInvBool
+                ld e, KindHL
+                jp pushIntResult
+
+eqHLConCode     ld de, 0
+                xor a
+                sbc hl, de
+eqHLConLength   equ * - eqHLConCode
+
+eqHLVar         ld (eqHLVarCode + 2), de
+                ld hl, eqHLVarCode
+                ld bc, eqHLVarLength
+                call Gen
+                call genHLToInvBool
+                ld e, KindHL
+                jp pushIntResult
+
+eqHLVarCode     ld de, (0)
+                xor a
+                sbc hl, de
+eqHLVarLength   equ * - eqHLVarCode
+
+eqConHL         ld d, b
+                ld e, c
+                jp eqHLCon
+
+eqConCon:       ld h, b
+                ld l, c
+                xor a
+                sbc hl, de
+                call hlToInvBoolCode
+                ld e, KindCon
+                jp pushIntResult
+
+eqConVar        call stealHL
+                ld (eqConVarCode + 1), bc
+                ld (eqConVarCode + 4), de
+                ld hl, eqConVarCode
+                ld bc, eqConVarLength
+                call Gen
+                call genHLToInvBool
+                ld e, KindHL
+                jp pushIntResult
+
+eqConVarCode    ld de, 0
+                ld hl, (0)
+                xor a
+                sbc hl, de
+eqConVarLength  equ * - eqConVarCode
+
+eqVarHL         ld d, b
+                ld e, c
+                jp eqHLVar
+
+eqVarCon        ex de, hl
+                ld d, b
+                ld e, c
+                ld b, h
+                ld c, l
+                jp eqConVar
+
+eqVarVar        call stealHL
+                ld (eqVarVarCode+1), bc
+                ld (eqVarVarCode+5), de
+                ld hl, eqVarVarCode
+                ld bc, eqVarVarLength
+                call Gen
+                call genHLToInvBool
+                ld e, KindHL
+                jp pushIntResult
+
+eqVarVarCode    ld hl, (0)
+                ld de, (0)
+                xor a
+                sbc hl, de
+eqVarVarLength  equ * - eqVarVarCode
+
+eqStkHL         ld hl, eqStkHLCode
+                ld bc, eqStkHLLength
+                call Gen
+                call genHLToInvBool
+                ld e, KindHL
+                jp pushIntResult
+
+eqStkHLCode     pop de
+                xor a
+                sbc hl, de
+eqStkHLLength   equ * - eqStkHLCode
+
+hlToBoolCode    ld a, h                 ; Convert hl to 1 if non-zero.
+                or l
+                sub 1
+                ld a, 0
+                ld h, a
+                adc a, a
+                xor $01
+                ld l, a
+hlToBoolLength  equ * - hlToBoolCode
+                ret                     ; So we can use the above as a routine.
+
+genHLToBool     ld hl, hlToBoolCode
+                ld bc, hlToBoolLength
+                jp Gen
+
+hlToInvBoolCode ld a, h                 ; Convert hl to 0 if non-zero, 1 otherwise.
+                or l
+                sub 1
+                ld a, 0
+                ld h, a
+                adc a, a
+                ld l, a
+hlToInvBoolLength  equ * - hlToInvBoolCode
+                ret                     ; So we can use the above as a routine.
+
+genHLToInvBool  ld hl, hlToInvBoolCode
+                ld bc, hlToInvBoolLength
+                jp Gen
+
 notTbl          db "not", 0
 complementTbl   db "complement", 0
 xorTbl          db "xor", 0
@@ -605,9 +697,13 @@ lparAny         ld hl, (newBinOp) ; Check waiting operator is rpar.
                 and a
                 sbc hl, bc
                 jp nz, lparUnmatched
-                ld hl, (binOpRTypeKind)
+lparPushTyKy    ld hl, (binOpRTypeKind)
                 push hl
-                push de
+                ld a, l
+                cp KindHL
+                jp nz, lparPushValue
+                ld (kindHLPtr), sp
+lparPushValue   push de
                 jp eCont
 
 lparUnmatched   halt ; lpar without matching rpar.
@@ -658,19 +754,4 @@ doneStk         ld hl, doneStkCode
 
 doneStkCode     pop hl
 doneStkLength   equ * - doneStkCode
-
-dbgEStartOrEnd          db "[expr start/end]", 0
-dbgEReachedEnd          db "reached end of expr", 13, 0
-dbgEInt                 db "push int con ", 0
-dbgEVar                 db "push int var ", 0
-dbgESub                 db "push binop sub", 13, 0
-dbgEAdd                 db "push binop add", 13, 0
-dbgELPar                db "push lpar", 13, 0
-dbgERPar                db "push rpar", 13, 0
-dbgENeg                 db "push unop neg", 13, 0
-dbgENot                 db "push unop not", 13, 0
-dbgEComplement          db "push unop complement", 13, 0
-dbgEPushBinOp           db "push binop ", 0
-dbgECompiling           db "compiling ", 0
-dbgECompilingPrevOp     db "compiling previous op", 0
 

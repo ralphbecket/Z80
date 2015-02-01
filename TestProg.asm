@@ -13,9 +13,18 @@ Start           call Cls
                 ;ld hl, testProg4: call runTest
                 ;ld hl, testProg5: call runTest
                 ;ld hl, testProg6: call runTest
-                ld hl, testProg7: call runTest
-                ld hl, testProg8: call runTest
-                ;ld hl, theQuickEtc: call PutStrNL
+                ;ld hl, testProg7: call runTest
+                ;ld hl, testProg8: call runTest
+                ;ld hl, testProg9: call runTest
+                ;ld hl, testProg10: call runTest
+                ;ld hl, testProg11: call runTest
+                ;ld hl, testProg12: call runTest
+                ;ld hl, testProg13: call runTest
+                ;ld hl, testProg14: call runTest
+                ;ld hl, testProg15: call runTest
+                ld hl, testProg16: call runTest
+                ld hl, testProg17: call runTest
+
                 halt ; test complete!
 
 runTest         ld (NextChPtr), hl
@@ -41,8 +50,15 @@ testProg5       db "x = 1 y = x + 5 - 3 + x", 0
 testProg6       db "x = 1 + (3 - 2)", 0
 testProg7       db "x = 1 x = x + 1", 0
 testProg8       db "x = 1 y = 2 x = x + y", 0
-
-theQuickEtc     db "The Quick, Brown Fox Jumps Over The Lazy Dog.", 0
+testProg9       db "x = 3 = 3", 0
+testProg10      db "x = 3 = 4", 0
+testProg11      db "x = 1 y = x = x", 0
+testProg12      db "x = 1 y = (x + 1) = (x + 1)", 0
+testProg13      db "x = 1 y = (x + 1) = (x + 2)", 0
+testProg14      db "x = 1 y = (x + 1) = x", 0
+testProg15      db "x = 1 y = x = (x + 1)", 0
+testProg16      db "x = 1 if x = 1 x = 2 end", 0
+testProg17      db "x = 1 if x = 3 x = 2 end", 0
 
                 include "Prog.asm"
                 include "Expr.asm"

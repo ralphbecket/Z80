@@ -24,6 +24,7 @@ PutPropCh       proc
                 add hl, de          ; hl = ptr to [row0 + width][row1]...[row7].
                 ld a, (hl)
                 and $07
+                inc a
                 ;inc a
                 ld b, a             ; a, b = ch width in px.
                 push hl
@@ -109,6 +110,19 @@ prepNextRow     inc ix
                 and $07
                 jr nz, drawBitmap
 
+                ld a, (PutPropX)        ; Handle some edge cases.
+                and a
+                jr nz, notAtRowEnd
+
+                dec a                   ; Ensure we do a NL on next char.
+                ld (PutPropX), a
+                ret
+
+notAtRowEnd     and $07
+                ret nz
+
+                ld hl, PutAttrPtr       ; Move on to the next display cell.
+                inc (hl)
                 ret
 
                 endp
@@ -116,7 +130,7 @@ prepNextRow     inc ix
 PropCharSet     dw PropChars
 PutPropX        db 0
 PutAttrPtr      dw $5800
-PutAttr         db %10110001
+PutAttr         db %01110001
 PutNL           ret
 
                 include "PropChars.asm"
