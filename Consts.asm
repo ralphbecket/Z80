@@ -125,9 +125,10 @@ TypeInts        equ TypeInt + TypeArray
 TypeStrs        equ TypeStr + TypeArray
 NonTypeBits     equ $f0
 TypeLabel       equ $ff
-TypeFunc        equ $fe
-TypeProc        equ $fd
-TypeVoid        equ $fc
+TypeUndefdLabel equ $fe
+TypeFunc        equ $fd
+TypeProc        equ $fc
+TypeVoid        equ $fb
 
 TokEOF          equ $00
 TokAndAlso      equ $81                 ; &&

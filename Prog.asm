@@ -5,21 +5,22 @@
 ; is assigned the reason for a scope being closed so the scope
 ; handler can decide what to do.
 
-ResetProg       call ResetHeap
+StartProg       call ResetHeap
                 call ResetScan
                 call ResetGen
                 call ResetSymTabs
                 ld hl, pEndProg
                 push hl
-                ret
 
 Prog            call Scan
                 cp TokNewID
                 jp z, pNewID
                 cp TokID
                 jp z, pID
+                cp ':'
+                jp z, pLabel
                 cp TokEOF
-                jp z, pEnd
+                jp z, pEndProg
 
                 halt ; Prog syntax error!
 
@@ -102,6 +103,8 @@ pID             ld a, (hl)
                 jp z, pElse
                 cp TokEnd
                 jp z, pEnd
+                cp TokGoto
+                jp z, pGoto
                 halt                    ; Unknown keyword!
 
 pAssgt          push hl                 ; Save the assignment target details.
@@ -154,7 +157,9 @@ pUnclosedIf     halt
 pUnopenedIf     halt
 
 pEndElse        nop                     ; Must be different than pEndIf when we hit 'else'.
-pEndIf          ld de, (CodePtr)
+pEndIf          cp TokEnd
+                jp nz, pUnclosedIf
+                ld de, (CodePtr)
 pEndIfLp        pop hl                  ; hl = ptr to if false jp tgt.
                 ld a, h
                 or l
@@ -203,4 +208,85 @@ pElse           pop hl                  ; Check we're in an 'if'.
 endThenCode     jp 0                    ; Exit branch for preceding if-then block.
 endThenLength   equ * - endThenCode
 
+pLabel          call Scan
+                cp TokNewID
+                jp z, pNewLabel
+                cp TokID
+                jp z, pDefLabel
+
+pLabelSyntaxError halt
+
+pNewLabel       ld a, TypeLabel
+                ld bc, (ScannedIDStart)
+                ld de, (CodePtr)
+                call AddEntry
+                jp Prog
+
+pDefLabel       ld a, (hl)
+                cp TypeUndefdLabel
+                jp nz, pLabelReuseError
+                ld a, TypeLabel
+                ld (hl), a
+                inc hl
+                ld bc, (CodePtr)
+pDefLabelLp     ld e, (hl)
+                ld (hl), c
+                inc hl
+                ld d, (hl)
+                ld (hl), b
+                ex de, hl
+                ld a, h
+                or l
+                jp nz, pDefLabelLp
+                jp Prog
+
+pLabelReuseError halt ; Trying to redefine a symbol.
+
+pGoto           call Scan
+                cp TokNewID
+                jp z, pGotoNewLabel
+                cp TokID
+                jp z, pGotoLabel
+
+pGotoSyntaxError halt ; Expected a goto label.
+
+pGotoNewLabel   ld a, TypeUndefdLabel
+                ld bc, (ScannedIDStart)
+                ld de, (CodePtr)
+                inc de
+                call AddEntry
+                ld hl, 0
+                ld (gotoCode + 1), hl
+                jp pGenGoto
+
+pGotoLabel      ld a, (hl)
+                inc hl
+                cp TypeUndefdLabel
+                jp z, pGotoUndefdLabel
+                cp TypeLabel
+                jp nz, pGotoSyntaxError
+                ld a, (hl)
+                inc hl
+                ld h, (hl)
+                ld l, a
+                ld (gotoCode + 1), hl
+
+pGenGoto        ld hl, gotoCode
+                ld bc, gotoLength
+                call Gen
+                jp Prog
+
+gotoCode        jp 0
+gotoLength      equ * - gotoCode
+
+pGotoUndefdLabel ld e, (hl)
+                inc hl
+                ld d, (hl)
+                ld (gotoCode + 1), de
+                ld de, (CodePtr)
+                inc de
+                ld (hl), d
+                dec hl
+                ld (hl), e
+                jp pGenGoto
 
