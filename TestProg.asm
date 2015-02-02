@@ -24,6 +24,8 @@ Start           call Cls
                 ;ld hl, testProg15: call runTest
                 ld hl, testProg16: call runTest
                 ld hl, testProg17: call runTest
+                ld hl, testProg18: call runTest
+                ld hl, testProg19: call runTest
 
                 halt ; test complete!
 
@@ -59,6 +61,8 @@ testProg14      db "x = 1 y = (x + 1) = x", 0
 testProg15      db "x = 1 y = x = (x + 1)", 0
 testProg16      db "x = 1 if x = 1 x = 2 end", 0
 testProg17      db "x = 1 if x = 3 x = 2 end", 0
+testProg18      db "x = 1 if x = 3 x = 2 else x = 4 end", 0
+testProg19      db "x = 1 if x = 3 x = 2 elif x = 1 x = 5 else x = 4 end", 0
 
                 include "Prog.asm"
                 include "Expr.asm"

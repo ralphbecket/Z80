@@ -1,6 +1,6 @@
 ; This is where we parse and compile the program.
 ;
-; We deal with scope by pushing any needed data followed by a
+; We deal with scope by pushing any needed state followed by a
 ; handler address on the stack.  The a register
 ; is assigned the reason for a scope being closed so the scope
 ; handler can decide what to do.
@@ -126,7 +126,10 @@ pExpectedEq     halt                    ; Expected an assignment.
 
 pAssgtTypeError halt
 
-pIf             call Expr
+pIf             ld hl, 0                ; End of pCloseIf marker.
+                push hl
+
+pIfExpr         call Expr
                 cp TypeInt
                 jp nz, pIfCondTypeError
                 ld hl, ifCode
@@ -135,7 +138,7 @@ pIf             call Expr
                 dec de
                 dec de                  ; de = ptr to if false jp tgt.
                 push de
-                ld de, pCloseIf
+                ld de, pEndIf
                 push de
                 jp Prog
 
@@ -146,17 +149,58 @@ ifCode          ld a, h
                 jp z, 0
 ifLength        equ * - ifCode
 
-pCloseIf        cp TokEnd
-                jp nz, pUnclosedIf
-                ld de, (CodePtr)
-                pop hl                  ; hl = ptr to if false jp tgt.
+pUnclosedIf     halt
+
+pUnopenedIf     halt
+
+pEndElse        nop                     ; Must be different than pEndIf when we hit 'else'.
+pEndIf          ld de, (CodePtr)
+pEndIfLp        pop hl                  ; hl = ptr to if false jp tgt.
+                ld a, h
+                or l
+                jp z, Prog
                 ld (hl), e
                 inc hl
                 ld (hl), d
+                jp pEndIfLp
+
+pElif           pop hl                  ; Check we're in an 'if'.
+                ld de, pEndIf
+                and a
+                sbc hl, de
+                jp nz, pUnopenedIf
+                ld hl, endThenCode
+                ld bc, endThenLength
+                call Gen
+                pop hl                  ; Previous 'if false' tgt ptr.
+                ld (hl), e
+                inc hl
+                ld (hl), d
+                dec de
+                dec de
+                push de                 ; Record 'if-then' exit tgt ptr.
+                jp pIfExpr
+
+pElse           pop hl                  ; Check we're in an 'if'.
+                ld de, pEndIf
+                and a
+                sbc hl, de
+                jp nz, pUnopenedIf
+                ld hl, endThenCode
+                ld bc, endThenLength
+                call Gen
+                pop hl                  ; Previous 'if false' tgt ptr.
+                ld (hl), e
+                inc hl
+                ld (hl), d
+                dec de
+                dec de
+                push de
+                ld hl, pEndElse
+                push hl
                 jp Prog
 
-pUnclosedIf     halt
+endThenCode     jp 0                    ; Exit branch for preceding if-then block.
+endThenLength   equ * - endThenCode
 
-pElif           halt
-pElse           halt
 
