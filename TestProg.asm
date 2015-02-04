@@ -30,9 +30,10 @@ Start           call Cls
                 ;ld hl, testProg21x: call runTest
                 ;ld hl, testProg22x: call runTest
                 ;ld hl, testProg23x: call runTest
-                ;ld hl, testProg24: call runTest
-                ;ld hl, testProg25: call runTest
+                ld hl, testProg24: call runTest
+                ld hl, testProg25: call runTest
                 ld hl, testProg26: call runTest
+                ld hl, testProg27: call runTest
 
                 halt ; test complete!
 
@@ -76,6 +77,7 @@ testProg23x     db "x = 0 if x = 1", 0
 testProg24      db "x = 0 :lp x = x + 1 if x = 1 goto lp end x = x", 0
 testProg25      db "x = 1 goto l1 x = 2 :l1 if x = 1 x = 3 end", 0
 testProg26      db "x = 1 goto l1 x = 2 :l1 if x = 1 x = 3 end if x = 4 goto l1 end", 0
+testProg27      db "goto l3 :l1 goto l2 :l3 goto l1 :l2", 0
 
                 include "Prog.asm"
                 include "Expr.asm"

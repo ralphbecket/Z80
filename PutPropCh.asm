@@ -25,7 +25,7 @@ PutPropCh       proc
                 ld a, (hl)
                 and $07
                 inc a
-                ;inc a
+                inc a
                 ld b, a             ; a, b = ch width in px.
                 push hl
                 pop ix              ; ix = ptr to [row0 + width][row1]...[row7].
@@ -130,8 +130,8 @@ notAtRowEnd     and $07
 PropCharSet     dw PropChars
 PutPropX        db 0
 PutAttrPtr      dw $5800
-PutAttr         db %01111000
+PutAttr         db %01000111
 PutNL           ret
 
-                include "PropChars.asm"
+                include "PropChars2.asm"
 

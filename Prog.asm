@@ -31,7 +31,7 @@ pEndProg        cp TokEOF
                 jp nz, pEndProgError
                 ret
 
-pEndProgError   halt ; Unexpected EOF.
+pEndProgError   halt ; Expected EOF.
 
 pNewID          ld (newEntryPtr), hl    ; This is a new assignment or a new call.
                 ld hl, (ScannedIDStart)
