@@ -2,10 +2,12 @@
                 output_szx "TestPutPropCh.szx", 0, Start
                 org $8000
 
+usePropChars    equ false
+
 Start           ld hl, theQuickEtc
                 call PutStr
                 ld hl, theQuickEtc
-                ;call PutStr
+                call PutStr
                 halt
 
 PutStr          ld a, (hl)
@@ -26,4 +28,19 @@ theQuickEtc     db "abcde fghij klkmn opqrs tuvw xyz "
                 db "3.141592768  e^(i * pi) = -1", 0
 
                 include "PutPropCh.asm"
+                include "PropChars2.asm"
+
+CharSet         dw PropChars
+PutPropX        db 0
+PutAttrPtr      dw $5800
+PutAttr         db %01000111
+
+PutNL           ld hl, (PutAttrPtr)
+                inc hl
+                ld (PutAttrPtr), hl
+                ld a, l
+                and %00011111
+                jp nz PutNL
+                ld (PutPropX), a
+                ret
 

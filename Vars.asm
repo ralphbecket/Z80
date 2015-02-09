@@ -1,21 +1,21 @@
 
 scannedIDLastCh db 0                    ; Temp. when zeroing end of ID for symtab lookup.
 haveSavedTok    db 0                    ; Non-zero when we have a saved token to serve.
-savedTok        db 0                    ; The saved token, if any.
-savedTokEntry   dw 0                    ; The saved token entry ptr, if any.
 
 NextChPtr       dw 0                    ; Ptr to the next source char to read.
 ScannedInt      dw 0                    ; The scanned int.
 ScannedIDStart  dw 0                    ; Ptr to first char of scanned ID.
 ScannedIDEnd    dw 0                    ; Ptr to one past last char of scanned ID.
+ScannedTok      db 0
+ScannedSymEntry dw 0
 
 CodeBase        dw $e000
 CodePtr         dw $e000
 CodeTop         dw $f000
 
-
 if usePropChars
 CharSet         dw PropChars
+PutPropX        db 0
 else
 CharSet         dw RomChars
 endif
@@ -25,19 +25,25 @@ PutAttr         db Bright + BlackInk + WhitePaper
 GlobalSymTab    ds 256
 LocalSymTab     ds 256
 
-newBinOp        dw 0                    ; Temporary note of the new operator to be pushed.
-kindHLPtr       dw 0                    ; 0 or the address of the KindHL entry on the stack.
+eNewBinOp       equ *                   ; Temporary note of the new operator to be pushed.
+eNewBinOpIdx    db 0
+eNewBinOpPrec   db 0
+eKindHLPtr      dw 0                    ; 0 or the address of the KindHL entry on the stack.
+eOpTblEntryPtr  dw 0
 
-binOpLValue     dw 0
-binOpLTypeKind  equ *
-binOpLKind      db 0
-binOpLType      db 0
+eLValue         dw 0
+eLTypeKind      equ *
+eLKind          db 0
+eLType          db 0
 
-binOpRValue     dw 0
-binOpRTypeKind  equ *
-binOpRKind      db 0
-binOpRType      db 0
-ExprType        equ binOpRType
+eRValue         dw 0
+eRTypeKind      equ *
+eRKind          db 0
+eRType          db 0
+
+eLRKinds        db 0
+
+ExprType        equ eRType
 
 symTabIDPtr     dw 0
 

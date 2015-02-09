@@ -6,10 +6,10 @@ Scan            ld a, (haveSavedTok)
 
                 xor a                   ; We have a "saved" token (via UnScan).
                 ld (haveSavedTok), a
-                ld a, (savedTok)
+                ld a, (ScannedTok)
                 cp TokNewID
                 jp z, lookupID          ; This may have been added since last time.
-                ld hl, (savedTokEntry)
+                ld hl, (ScannedSymEntry)
                 ret
 
 scanTok         ld hl, ScanCharProps
@@ -35,6 +35,7 @@ skipWS          equ lp - dispatchFrom   ; Jump backwards!
 retCh           equ * - dispatchFrom
                 ld (NextChPtr), bc
                 ld a, e
+                ld (ScannedTok), a
                 ret
 
 maybeAndAlso    equ * - dispatchFrom    ; & or &&?
@@ -93,6 +94,7 @@ intLp           ld a, (bc)
 intDone         ld (NextChPtr), bc
                 ld (ScannedInt), hl
                 ld a, TokInt
+                ld (ScannedTok), a
                 ret
 
 isAlpha         equ * - dispatchFrom
@@ -120,20 +122,21 @@ lookupID        ld hl, (ScannedIDEnd)
                 ld de, (ScannedIDStart)
                 ld hl, GlobalSymTab     ; XXX More to go here!
                 call FindSym
+                ld (ScannedSymEntry), hl
                 ld a, (scannedIDLastCh)
                 ld de, (ScannedIDEnd)
                 ld (de), a
                 ld a, TokID
+                ld (ScannedTok), a
                 ret z
                 ld a, TokNewID
+                ld (ScannedTok), a
                 ret
 
 notASCII        di
                 halt ; This isn't plain ASCII!
 
-UnScan          ld (savedTok), a
-                ld (savedTokEntry), hl
-                ld a, 1
+UnScan          ld a, 1
                 ld (haveSavedTok), a
                 ret
 

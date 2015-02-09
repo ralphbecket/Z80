@@ -1,5 +1,9 @@
 ; PutC(a = char)
 ;
+                if usePropChars
+                include "PutPropCh.asm"
+PutCh           equ PutPropCh
+                else
 PutCh           proc
 
                 cp 13
@@ -50,11 +54,17 @@ charOK          push af                 ; Save the char.
                 ret
 
                 endp
+                endif
 
 PutSpc          ld a, ' '
                 jp PutCh
 
 PutNL           proc
+
+                if usePropChars
+                xor a
+                ld (PutPropX), a
+                endif
 
                 ld hl, (PutAttrPtr)
                 ld de, $20
@@ -265,7 +275,12 @@ lineCount       db 0
 
                 endp
 
-Cls             call GetBlankPAttr
+Cls             if usePropChars
+                xor a
+                ld (PutPropX), a
+                endif
+
+                call GetBlankPAttr
                 ld hl, AttrFile
                 ld (PutAttrPtr), hl
                 ld de, AttrFile + 1

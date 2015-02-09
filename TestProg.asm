@@ -2,30 +2,30 @@
                 output_szx "TestProg.szx", 0, Start
                 org $8000
 
-debug           equ true
-usePropChars    equ false
+debug           equ false
+usePropChars    equ true
 
 Start           call Cls
-                ;ld hl, testProg0: call runTest
-                ;ld hl, testProg1: call runTest
-                ;ld hl, testProg2: call runTest
-                ;ld hl, testProg3: call runTest
-                ;ld hl, testProg4: call runTest
-                ;ld hl, testProg5: call runTest
-                ;ld hl, testProg6: call runTest
-                ;ld hl, testProg7: call runTest
-                ;ld hl, testProg8: call runTest
-                ;ld hl, testProg9: call runTest
-                ;ld hl, testProg10: call runTest
-                ;ld hl, testProg11: call runTest
-                ;ld hl, testProg12: call runTest
-                ;ld hl, testProg13: call runTest
-                ;ld hl, testProg14: call runTest
-                ;ld hl, testProg15: call runTest
-                ;ld hl, testProg16: call runTest
-                ;ld hl, testProg17: call runTest
-                ;ld hl, testProg18: call runTest
-                ;ld hl, testProg19: call runTest
+                ld hl, testProg0: call runTest
+                ld hl, testProg1: call runTest
+                ld hl, testProg2: call runTest
+                ld hl, testProg3: call runTest
+                ld hl, testProg4: call runTest
+                ld hl, testProg5: call runTest
+                ld hl, testProg6: call runTest
+                ld hl, testProg7: call runTest
+                ld hl, testProg8: call runTest
+                ld hl, testProg9: call runTest
+                ld hl, testProg10: call runTest
+                ld hl, testProg11: call runTest
+                ld hl, testProg12: call runTest
+                ld hl, testProg13: call runTest
+                ld hl, testProg14: call runTest
+                ld hl, testProg15: call runTest
+                ld hl, testProg16: call runTest
+                ld hl, testProg17: call runTest
+                ld hl, testProg18: call runTest
+                ld hl, testProg19: call runTest
                 ;ld hl, testProg20x: call runTest
                 ;ld hl, testProg21x: call runTest
                 ;ld hl, testProg22x: call runTest
@@ -83,9 +83,9 @@ testProg27      db "goto l3 :l1 goto l2 :l3 goto l1 :l2", 0
                 include "Expr.asm"
                 include "Gen.asm"
                 include "Scan.asm"
-                include "Puts.asm"
                 include "SymTab.asm"
                 include "Cells.asm"
                 include "Vars.asm"
                 include "Consts.asm"
+                include "Puts.asm"
 

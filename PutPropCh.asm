@@ -1,6 +1,3 @@
-
-
-
 ; PutPropCh(a = char)
 ;
 ; Print a character using a proportionally spaced font
@@ -12,20 +9,29 @@
 ;
 PutPropCh       proc
 
-                ; XXX Handle NL, non-printing chars, etc.
-                sub 32
+                cp 13
+                jp z, PutNL
 
-                ld h, 0             ; Calc the char data addr.
+                push af
+                call MaybeScroll
+                pop af
+
+                sub 32
+                jp nc, calcBitMapPtr
+
+                ld a, '?' - 32
+
+calcBitMapPtr   ld h, 0             ; Calc the char data addr.
                 ld l, a
                 add hl, hl
                 add hl, hl
                 add hl, hl
-                ld de, (PropCharSet)
+                ld de, (CharSet)
                 add hl, de          ; hl = ptr to [row0 + width][row1]...[row7].
                 ld a, (hl)
                 and $07
                 inc a
-                inc a
+                ;inc a
                 ld b, a             ; a, b = ch width in px.
                 push hl
                 pop ix              ; ix = ptr to [row0 + width][row1]...[row7].
@@ -127,11 +133,4 @@ notAtRowEnd     and $07
 
                 endp
 
-PropCharSet     dw PropChars
-PutPropX        db 0
-PutAttrPtr      dw $5800
-PutAttr         db %01000111
-PutNL           ret
-
-                include "PropChars2.asm"
 

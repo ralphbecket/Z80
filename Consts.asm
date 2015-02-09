@@ -98,10 +98,6 @@ ScanCharProps   db retCh                ; 0 = EOF.
                 db retCh                ; ~
                 db skipWS               ; DEL
 
-if usePropChars
-                include "PropChars.asm"
-endif
-
 KwIf            db "if", 0
 KwEnd           db "end", 0
 KwGoto          db "goto", 0
@@ -123,6 +119,7 @@ TypeStr         equ $02
 TypeArray       equ $08
 TypeInts        equ TypeInt + TypeArray
 TypeStrs        equ TypeStr + TypeArray
+TypeAny         equ $ff                 ; Special generic type ID.
 NonTypeBits     equ $f0
 TypeLabel       equ $ff
 TypeUndefdLabel equ $fe
@@ -172,10 +169,13 @@ Bright          equ %01000000
 Flash           equ %10000000
 RomChars        equ $3d00
 
-KindHL          equ 0                   ; Value is "in" the HL register.
-KindCon         equ 1                   ; Constant.
+KindCon         equ 0                   ; Constant (this must be 0!).
+KindHL          equ 1                   ; Value is "in" the HL register.
 KindVar         equ 2                   ; Variable.
 KindStk         equ 3                   ; Value is "on" the stack.
 
 CellSize        equ 7                   ; Src id ptr, type byte, var ptr, next ptr.
 
+                if usePropChars
+                include "PropChars2.asm"
+                endif
