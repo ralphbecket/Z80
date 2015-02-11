@@ -115,7 +115,28 @@ eExpBinOpOrDone call Scan
                 ld hl, $ff00 + eRParIdx
                 jp z, ePushBinOp
                 cp '='
-                ld hl, $b000 + eEQIdx
+                ld hl, $bf00 + eEQIdx
+                jp z, ePushBinOp
+                cp TokNE
+                ld hl, $be00 + eNEIdx
+                jp z, ePushBinOp
+                cp '<'
+                ld hl, $bd00 + eLTIdx
+                jp z, ePushBinOp
+                cp TokLE
+                ld hl, $bd00 + eLEIdx
+                jp z, ePushBinOp
+                cp '>'
+                ld hl, $bd00 + eGTIdx
+                jp z, ePushBinOp
+                cp TokGE
+                ld hl, $bd00 + eGEIdx
+                jp z, ePushBinOp
+                cp '&'
+                ld hl, $8000 + eAndIdx
+                jp z, ePushBinOp
+                cp '|'
+                ld hl, $8000 + eOrIdx
                 jp z, ePushBinOp
                 ; ... XXX other infix binops ...
 
@@ -443,8 +464,29 @@ eAddIdx         equ ($ - eOpTbl) / eOpTblEntrySize
 eSubIdx         equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eSubCode, eSubLength, TypeInt)
 
+eAndIdx         equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eAndCode, eAndLength, TypeInt)
+
+eOrIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eOrCode, eOrLength, TypeInt)
+
 eEQIdx          equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eEQCode, eEQLength, TypeInt)
+
+eNEIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eNECode, eNELength, TypeInt)
+
+eLTIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eLTCode, eLTLength, TypeInt)
+
+eLEIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eLECode, eLELength, TypeInt)
+
+eGTIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eGTCode, eGTLength, TypeInt)
+
+eGEIdx          equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eGECode, eGELength, TypeInt)
 
 eRParIdx        equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(0, 0, 0, 0, 0, 0, 0)
@@ -552,4 +594,57 @@ eEQCode         xor a
 eEQCodeL:
 eEQLength       equ * - eEQCode
                 ret
+
+eNECode         xor a
+                sbc hl, de
+                ld h, a
+                ld l, a
+                jr z, eNECodeL
+                inc l
+eNECodeL:
+eNELength       equ * - eNECode
+                ret
+
+eAndCode        ld a, h
+                and d
+                ld h, a
+                ld a, l
+                and e
+                ld l, a
+eAndLength      equ * - eAndCode
+                ret
+
+eOrCode         ld a, h
+                or d
+                ld h, a
+                ld a, l
+                or e
+                ld l, a
+eOrLength       equ * - eOrCode
+                ret
+
+eLTCode         ex de, hl
+eGTCode         xor a
+                sbc hl, de
+                ld h, a
+                ld l, a
+                jr nc, eGTCodeL
+                inc l
+eGTCodeL:
+eGTLength       equ * - eGTCode
+eLTLength       equ * - eLTCode
+                ret
+
+eGECode         ex de, hl
+eLECode         xor a
+                sbc hl, de
+                ld h, a
+                ld l, a
+                jr c, eGECodeL
+                inc l
+eGECodeL:
+eGELength       equ * - eGECode
+eLELength       equ * - eLECode
+                ret
+
 

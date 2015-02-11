@@ -34,6 +34,22 @@ Start           call Cls
                 ld hl, testProg25: call runTest
                 ld hl, testProg26: call runTest
                 ld hl, testProg27: call runTest
+                ld hl, testProg28: call runTest
+                ld hl, testProg29: call runTest
+                ld hl, testProg30: call runTest
+                ld hl, testProg31: call runTest
+                ld hl, testProg32: call runTest
+                ld hl, testProg33: call runTest
+                ld hl, testProg34: call runTest
+                ld hl, testProg35: call runTest
+                ld hl, testProg36: call runTest
+                ld hl, testProg37: call runTest
+                ld hl, testProg38: call runTest
+                ld hl, testProg39: call runTest
+                ld hl, testProg40: call runTest
+                ld hl, testProg41: call runTest
+                ld hl, testProg42: call runTest
+                ld hl, testProg43: call runTest
 
                 halt ; test complete!
 
@@ -78,6 +94,22 @@ testProg24      db "x = 0 :lp x = x + 1 if x = 1 goto lp end x = x", 0
 testProg25      db "x = 1 goto l1 x = 2 :l1 if x = 1 x = 3 end", 0
 testProg26      db "x = 1 goto l1 x = 2 :l1 if x = 1 x = 3 end if x = 4 goto l1 end", 0
 testProg27      db "goto l3 :l1 goto l2 :l3 goto l1 :l2", 0
+testProg28      db "x = 5 != 6", 0
+testProg29      db "x = 7 != 7", 0
+testProg30      db "x = 2 & 3", 0
+testProg31      db "x = 2 | 1", 0
+testProg32      db "x = 1 < 2", 0
+testProg33      db "x = 1 < 1", 0
+testProg34      db "x = 2 < 1", 0
+testProg35      db "x = 1 > 2", 0
+testProg36      db "x = 1 > 1", 0
+testProg37      db "x = 2 > 1", 0
+testProg38      db "x = 1 <= 2", 0
+testProg39      db "x = 1 <= 1", 0
+testProg40      db "x = 2 <= 1", 0
+testProg41      db "x = 1 >= 2", 0
+testProg42      db "x = 1 >= 1", 0
+testProg43      db "x = 2 >= 1", 0
 
                 include "Prog.asm"
                 include "Expr.asm"
