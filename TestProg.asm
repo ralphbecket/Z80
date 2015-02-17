@@ -2,6 +2,8 @@
                 output_szx "TestProg.szx", 0, Start
                 org $8000
 
+                ;profile = true
+
 debug           equ false
 usePropChars    equ true
 
@@ -50,12 +52,19 @@ Start           call Cls
                 ld hl, testProg41: call runTest
                 ld hl, testProg42: call runTest
                 ld hl, testProg43: call runTest
+                ld hl, testProg44: call runTest
+                ld hl, testProg45: call runTest
+                ld hl, testProg46: call runTest
+                ld hl, testProg47: call runTest
+                ld hl, testProg48: call runTest
+                ld hl, testProg49: call runTest
+                ld hl, testProg50: call runTest
 
                 halt ; test complete!
 
 runTest         ld (NextChPtr), hl
                 call PutStrNL
-                call StartProg
+                call CompileProg
                 call GenRet
                 ld hl, (CodeBase)
                 call runProg
@@ -110,6 +119,13 @@ testProg40      db "x = 2 <= 1", 0
 testProg41      db "x = 1 >= 2", 0
 testProg42      db "x = 1 >= 1", 0
 testProg43      db "x = 2 >= 1", 0
+testProg44      db "x = 0 && 10", 0
+testProg45      db "x = 10 && 0", 0
+testProg46      db "x = 10 && 20", 0
+testProg47      db "x = 0 || 10", 0
+testProg48      db "x = 10 || 0", 0
+testProg49      db "x = 10 || 20", 0
+testProg50      db "x = 10 y = -x", 0
 
                 include "Prog.asm"
                 include "Expr.asm"

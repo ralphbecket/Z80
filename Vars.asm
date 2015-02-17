@@ -25,6 +25,9 @@ PutAttr         db Bright + BlackInk + WhitePaper
 GlobalSymTab    ds 256
 LocalSymTab     ds 256
 
+eAndOrChain     dw 0                    ; Chain of &&/|| jump addr ptrs.
+eAndOrCode      dw 0                    ; The &&/|| code is parameterised via this.
+
 eNewBinOp       equ *                   ; Temporary note of the new operator to be pushed.
 eNewBinOpIdx    db 0
 eNewBinOpPrec   db 0

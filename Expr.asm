@@ -138,6 +138,12 @@ eExpBinOpOrDone call Scan
                 cp '|'
                 ld hl, $8000 + eOrIdx
                 jp z, ePushBinOp
+                cp TokAndAlso
+                ld hl, $c000 + eAndAlsoIdx
+                jp z, eAndOr
+                cp TokOrElse
+                ld hl, $c000 + eOrElseIdx
+                jp z, eAndOr
                 ; ... XXX other infix binops ...
 
                 call UnScan             ; This is the end of the expr.
@@ -186,10 +192,16 @@ eUnopKind       ld a, 0
                 ld (eLType), a          ; Zero the left arg type for type matching.
                 ld a, (eRKind)          ; Gen code to put the arg in hl (unless con).
                 ld (eLRKinds), a
-                cp KindVar
-                jp nz, eFindOpType
-
-                call eStealHL
+                cp KindCon
+                jp z, eFindOpType       ; Nothing to do for KindCon or KindHL.
+                cp KindHL
+                jp z, eFindOpType
+                call eStealHL           ; Have to load HL with a var (can't be a Stk).
+                ld hl, (eRValue)
+                ld (eLdHLVarCode + 1), hl
+                ld hl, eLdHLVarCode
+                ld bc, eLdHLVarLength
+                call Gen
                 jp eFindOpType
 
 eBinopKinds     pop hl                  ; Fetch the left value and type/kind.
@@ -395,7 +407,7 @@ eNotConOp       ex de, hl
                 call Gen
 
 ePushHLResult   pop af
-                ld d, a                 ; d = result type.
+eSkipGenOpCode  ld d, a                 ; d = result type.
                 ld e, KindHL
                 ld hl, 0
                 push de
@@ -407,6 +419,11 @@ eRetryPushBinOp ld a, (eNewBinOpPrec)   ; Retrieve the new op precedence.
 
 ePushNewBinOp   ld hl, (eNewBinOp)
                 push hl
+                ld a, l                 ; && and || need special treatment.
+                cp eAndAlsoIdx
+                jp z, eAndOr
+                cp eAndOrIdx
+                jp z, eAndOr
                 jp eExpUnopOrValue
 
 eStealHL        ld hl, (eKindHLPtr)
@@ -422,7 +439,88 @@ eStealHL        ld hl, (eKindHLPtr)
 ePushHLCode     push hl
 ePushHLLength   equ * - ePushHLCode
 
-eNoHandler      jp eGenOpCode
+; XXX Need to deal with the eAndOrChain!
+eAndOr          ld (eNewBinOp), hl      ; Need to insert code *now* to check left arg.
+                pop de
+                ld (eLValue), de
+                pop bc
+                ld (eLTypeKind), bc
+                ld a, c
+                cp KindCon
+                jp z, eAndOrCon
+                cp KindVar
+                jp z, eAndOrVar
+
+eAndOrGen       ld a, (eNewBinOp)
+                cp eAndAlsoIdx
+                ld hl, eAndAlsoCode
+                ld bc, eAndAlsoLength
+                jp z, eAndOrGen1
+                ld hl, eOrElseCode
+                ld bc, eOrElseLength
+
+eAndOrGen1      call Gen
+                ld hl, (eAndOrChain)    ; Link in the jump target to fix up later.
+                ex de, hl
+                dec hl
+                ld (hl), d
+                dec hl
+                ld (hl), e
+                ld (eAndOrChain), hl
+
+                ld hl, $0000 + eAndOrIdx ; We've consumed a value, so we're now a unop!
+                push hl
+                jp eExpUnopOrValue
+
+eAndOrCon       call eStealHL
+                ld hl, (eLValue)
+                ld (eLdHLConCode + 1), hl
+                ld hl, eLdHLConCode
+                ld bc, eLdHLConLength
+                call Gen
+                jp eAndOrGen
+
+eAndOrVar       call eStealHL
+                ld hl, (eLValue)
+                ld (eLdHLVarCode + 1), hl
+                ld hl, eLdHLVarCode
+                ld bc, eLdHLVarLength
+                call Gen
+                jp eAndOrGen
+
+eAndOrHandler   ld a, (eRKind)
+                cp KindHL
+                jp z, eAndOrHandler1
+                cp KindVar
+                jp z, eAndOrRVar
+
+eAndOrRCon      ld hl, (eRValue)
+                ld (eLdHLConCode + 1), hl
+                ld hl, eLdHLConCode
+                ld bc, eLdHLConLength
+                call Gen
+                jp eAndOrHandler1
+
+eAndOrRVar      ld hl, (eRValue)
+                ld (eLdHLVarCode + 1), hl
+                ld hl, eLdHLVarCode
+                ld hl, eLdHLVarLength
+                call Gen
+
+eAndOrHandler1  ld hl, (eAndOrChain)    ; Fill in the conditional jump target.
+                ld e, (hl)
+                inc hl
+                ld d, (hl)
+                ld (eAndOrChain), de
+                ld de, (CodePtr)
+                ld (hl), d
+                dec hl
+                ld (hl), e
+
+                ld a, TypeInt
+                jp eSkipGenOpCode
+
+eNoHandler      jp eGenOpCode           ; For ops that don't need special handlers.
 
 ; The op table is a sequence of entries of the following form:
 ; - 1/2                 unop/binop;
@@ -487,6 +585,15 @@ eGTIdx          equ ($ - eOpTbl) / eOpTblEntrySize
 
 eGEIdx          equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eGECode, eGELength, TypeInt)
+
+eAndAlsoIdx     equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(0, 0, 0, 0, 0, 0, 0)
+
+eOrElseIdx      equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(0, 0, 0, 0, 0, 0, 0)
+
+eAndOrIdx       equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(1, TypeInt, 0, eAndOrHandler, 0, 0, 0)
 
 eRParIdx        equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(0, 0, 0, 0, 0, 0, 0)
@@ -623,6 +730,18 @@ eOrCode         ld a, h
 eOrLength       equ * - eOrCode
                 ret
 
+eAndAlsoCode    ld a, h
+                or l
+                jp z, 0
+eAndAlsoLength  equ * - eAndAlsoCode
+                ret
+
+eOrElseCode     ld a, h
+                or l
+                jp nz, 0
+eOrElseLength   equ * - eOrElseCode
+                ret
+
 eLTCode         ex de, hl
 eGTCode         xor a
                 sbc hl, de
@@ -646,5 +765,8 @@ eGECodeL:
 eGELength       equ * - eGECode
 eLELength       equ * - eLECode
                 ret
+
+
+
 
 

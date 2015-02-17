@@ -5,7 +5,7 @@
 ; is assigned the reason for a scope being closed so the scope
 ; handler can decide what to do.
 
-StartProg       call ResetHeap
+CompileProg     call ResetHeap
                 call ResetScan
                 call ResetGen
                 call ResetSymTabs
