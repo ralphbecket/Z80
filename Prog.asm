@@ -9,6 +9,8 @@ CompileProg     call ResetHeap
                 call ResetScan
                 call ResetGen
                 call ResetSymTabs
+                call UnReloc
+                call Reloc
                 ld hl, pEndProg
                 push hl
 

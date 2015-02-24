@@ -77,7 +77,7 @@ PutNL           proc
 
                 endp
 
-; Puts (hl = null terminated string ptr).
+; PutStr (hl = null terminated string ptr; hl = addr of terminating null).
 ;
 PutStr          proc
 

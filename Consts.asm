@@ -111,6 +111,8 @@ KwStr           db "str", 0
 KwStrs          db "strs", 0
                 db 0 ; End.
 
+                include "RelocTable.asm"
+
 ; We 'reuse' some of the char codes which do not stand for
 ; themselves here to represent other tokens.
 

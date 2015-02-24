@@ -8,6 +8,7 @@ debug           equ false
 usePropChars    equ true
 
 Start           call Cls
+                ld hl, testProg55: call runTest
                 ld hl, testProg0: call runTest
                 ld hl, testProg1: call runTest
                 ld hl, testProg2: call runTest
@@ -59,6 +60,17 @@ Start           call Cls
                 ld hl, testProg48: call runTest
                 ld hl, testProg49: call runTest
                 ld hl, testProg50: call runTest
+                ld hl, testProg51: call runTest
+                ld hl, testProg52: call runTest
+                ld hl, testProg53: call runTest
+                ld hl, testProg54: call runTest
+                ld hl, testProg55: call runTest
+                ld hl, testProg56: call runTest
+                ld hl, testProg57: call runTest
+                ld hl, testProg58: call runTest
+                ld hl, testProg59: call runTest
+                ld hl, testProg60: call runTest
+                ld hl, testProg61: call runTest
 
                 halt ; test complete!
 
@@ -126,6 +138,17 @@ testProg47      db "x = 0 || 10", 0
 testProg48      db "x = 10 || 0", 0
 testProg49      db "x = 10 || 20", 0
 testProg50      db "x = 10 y = -x", 0
+testProg51      db "x = 0 y = 10 * x", 0
+testProg52      db "x = 10 y = x * 10", 0
+testProg53      db "x = -10 y = 10 * x", 0
+testProg54      db "x = -10 y = x * -10", 0
+testProg55      db "x = 10 y = x / 2", 0
+testProg56      db "x = 5 y = 10 / x", 0
+testProg57      db "x = 10 y = x / 11", 0
+testProg58      db "x = 11 y = x / 10", 0
+testProg59      db "x = -10 y = x / 2", 0
+testProg60      db "x = 10 y = x / -2", 0
+testProg61      db "x = -10 y = x / -2", 0
 
                 include "Prog.asm"
                 include "Expr.asm"
@@ -133,6 +156,7 @@ testProg50      db "x = 10 y = -x", 0
                 include "Scan.asm"
                 include "SymTab.asm"
                 include "Cells.asm"
+                include "Runtime.asm"
                 include "Vars.asm"
                 include "Consts.asm"
                 include "Puts.asm"

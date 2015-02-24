@@ -56,6 +56,9 @@ newIDEnd        dw 0
 newVarPtr       dw 0
 newVarType      db 0
 
+rSavedSP        dw 0
+rRelocDelta     dw 0
+
 FreeBase        dw $d000                ; The lowest address which can contain cells.
 FreeTop         dw $e000                ; One above the highest address containing cells.
 FreeReached     dw $d000                ; The lowest used address in the cell heap.

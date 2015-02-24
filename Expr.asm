@@ -111,6 +111,12 @@ eExpBinOpOrDone call Scan
                 cp '-'
                 ld hl, $9000 + eSubIdx
                 jp z, ePushBinOp
+                cp '*'
+                ld hl, $8000 + eMulIdx
+                jp z, ePushBinOp
+                cp '/'
+                ld hl, $8800 + eDivIdx
+                jp z, ePushBinOp
                 cp ')'
                 ld hl, $ff00 + eRParIdx
                 jp z, ePushBinOp
@@ -133,10 +139,10 @@ eExpBinOpOrDone call Scan
                 ld hl, $bd00 + eGEIdx
                 jp z, ePushBinOp
                 cp '&'
-                ld hl, $8000 + eAndIdx
+                ld hl, $6000 + eAndIdx
                 jp z, ePushBinOp
                 cp '|'
-                ld hl, $8000 + eOrIdx
+                ld hl, $6000 + eOrIdx
                 jp z, ePushBinOp
                 cp TokAndAlso
                 ld hl, $c000 + eAndAlsoIdx
@@ -562,6 +568,12 @@ eAddIdx         equ ($ - eOpTbl) / eOpTblEntrySize
 eSubIdx         equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eSubCode, eSubLength, TypeInt)
 
+eMulIdx         equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eMulCode, eMulLength, TypeInt)
+
+eDivIdx         equ ($ - eOpTbl) / eOpTblEntrySize
+                eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eDivCode, eDivLength, TypeInt)
+
 eAndIdx         equ ($ - eOpTbl) / eOpTblEntrySize
                 eOpTblEntry(2, $11 * TypeInt, 0, eNoHandler, eAndCode, eAndLength, TypeInt)
 
@@ -690,6 +702,14 @@ eSubCode        ex de, hl
                 xor a
                 sbc hl, de
 eSubLength      equ * - eAddCode
+                ret
+
+eMulCode        call rMul
+eMulLength      equ * - eMulCode
+                ret
+
+eDivCode        call rDiv
+eDivLength      equ * - eDivCode
                 ret
 
 eEQCode         xor a
