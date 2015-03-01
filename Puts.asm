@@ -4,15 +4,13 @@
                 include "PutPropCh.asm"
 PutCh           equ PutPropCh
                 else
-PutCh           proc
-
-                cp 13
+PutCh           cp 13
                 jr z, PutNL
 
                 sub 32
-                jr nc, charOK
+                jr nc, pCharOK
                 ld a, '?' - 32
-charOK          push af                 ; Save the char.
+pCharOK         push af                 ; Save the char.
 
                 call MaybeScroll
 
@@ -53,15 +51,12 @@ charOK          push af                 ; Save the char.
 
                 ret
 
-                endp
                 endif
 
 PutSpc          ld a, ' '
                 jp PutCh
 
-PutNL           proc
-
-                if usePropChars
+PutNL           if usePropChars
                 xor a
                 ld (PutPropX), a
                 endif
@@ -75,13 +70,9 @@ PutNL           proc
                 ld (PutAttrPtr), hl
                 ret
 
-                endp
-
 ; PutStr (hl = null terminated string ptr; hl = addr of terminating null).
 ;
-PutStr          proc
-
-                ld a, (hl)
+PutStr          ld a, (hl)
                 and a
                 ret z
                 push hl
@@ -89,8 +80,6 @@ PutStr          proc
                 pop hl
                 inc hl
                 jr PutStr
-
-                endp
 
 ; Puts (hl = null terminated string ptr).
 ;
@@ -129,15 +118,13 @@ PutInt          bit 7, h
 
 ; PutUInt(hl = int).
 ;
-PutUInt         proc
-
-                ld a, h
+PutUInt         ld a, h
                 or l
-                jr nz, notZero
+                jr nz, pNotZero
                 ld a, '0'               ; Handle zero as a special case.
                 jp PutCh
 
-notZero         ld b, 0                 ; Note if we've output anything.
+pNotZero        ld b, 0                 ; Note if we've output anything.
 
                 xor a
                 ld de, 10000
@@ -174,13 +161,12 @@ putDigit        add a, b
 
                 endp
 
-PutHexDigit     proc
-                and $0f
+PutHexDigit     and $0f
                 add a, '0'
                 cp '0' + 10
-                jr c, putX
+                jr c, pPutX
                 add a, 'a' - '0' - 10
-putX            jp PutCh
+pPutX           jp PutCh
                 endp
 
 PutHexByte      push af
@@ -199,22 +185,20 @@ PutHexWord      push hl
                 ld a, l
                 jp PutHexByte
 
-MaybeScroll     proc
-
-                ld hl, (PutAttrPtr)
+MaybeScroll     ld hl, (PutAttrPtr)
                 ld a, h
                 cp $5b
                 ret c
+                if noScroll
+                call Cls
+                else
                 call Scroll
                 ld hl, AttrFile + $300 - $20
                 ld (PutAttrPtr), hl
+                endif
                 ret
 
-                endp
-
-Scroll          proc
-
-                ld hl, AttrFile
+Scroll          ld hl, AttrFile
                 ld (toAttrPtr), hl
                 ld hl, AttrFile + $20
                 ld (fromAttrPtr), hl
@@ -223,7 +207,7 @@ Scroll          proc
                 ld a, 23
                 ld (lineCount), a
 
-l1              ld de, (toAttrPtr)      ; Copy a line of attrs.
+pScroll1        ld de, (toAttrPtr)      ; Copy a line of attrs.
                 ld hl, (fromAttrPtr)
                 ld bc, $20
                 ldir
@@ -241,7 +225,7 @@ l1              ld de, (toAttrPtr)      ; Copy a line of attrs.
                 ld (toDispPtr), hl
 
                 ld b, 8                 ; Copy the row bitmaps.
-l2              push bc
+pScroll2        push bc
                 push hl
                 push de
                 ld bc, $20
@@ -251,11 +235,11 @@ l2              push bc
                 inc h
                 inc d
                 pop bc
-                djnz l2
+                djnz pScroll2
 
                 ld hl, lineCount        ; Repeat until done.
                 dec (hl)
-                jr nz, l1
+                jr nz, pScroll1
 
                 call GetBlankPAttr      ; Clear the last line.
                 ld hl, (toAttrPtr)
@@ -273,8 +257,6 @@ fromAttrPtr     dw 0
 toDispPtr       dw 0
 lineCount       db 0
 
-                endp
-
 Cls             if usePropChars
                 xor a
                 ld (PutPropX), a
@@ -289,9 +271,7 @@ Cls             if usePropChars
                 ldir
                 ret
 
-GetBlankPAttr   proc
-
-                ld a, (PutAttr)
+GetBlankPAttr   ld a, (PutAttr)
 
                 ld c, a
 
@@ -306,7 +286,5 @@ GetBlankPAttr   proc
                 ret z
                 set 6, a
                 ret
-
-                endp
 
 

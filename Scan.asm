@@ -29,7 +29,6 @@ lp              ld a, (bc)
 dispatch        jr *                    ; SMC!
 dispatchFrom    equ *
 
-                endp
 skipWS          equ lp - dispatchFrom   ; Jump backwards!
 
 retCh           equ * - dispatchFrom
@@ -143,73 +142,6 @@ UnScan          ld a, 1
 ResetScan       xor a
                 ld (haveSavedTok), a
                 ret
-
-                if debug                ; ---- DEBUGGING CODE ----
-
-; PutTok(a = token)
-;
-PutTok          proc
-
-                ld (rememberTok + 1), a ; SMC!
-                ld a, '['
-                call PutCh
-                ld hl, tokNames
-
-chkTokLp        ld a, (hl)
-                inc hl
-rememberTok     cp 0                    ; SMC!
-                jp z, found
-                cp $ff                  ; Check for done.
-                jp z, notFound
-
-skipName        ld a, (hl)
-                inc hl
-                and a
-                jp nz, skipName
-
-                jp chkTokLp
-
-notFound        ld a, (rememberTok + 1)
-                call PutCh              ; This is a 'stands for itself' token.
-                jp finish
-
-found           call PutStr
-                ld a, (rememberTok + 1)
-
-                cp TokInt
-                jp nz, notTokInt
-
-                ld hl, (ScannedInt)
-                call PutUInt
-                jp finish
-
-notTokInt       cp TokNewID
-                jp nz, finish
-
-                ld de, (ScannedIDStart)
-                ld hl, (ScannedIDEnd)
-                sbc hl, de
-                ex de, hl
-                call PutStrN
-
-finish          ld a, ']'
-                call PutCh
-                ret
-
-tokNames        db 0, "EOF", 0
-                db TokAndAlso, "&&", 0
-                db TokOrElse, "||", 0
-                db TokLE, "<=", 0
-                db TokGE, ">=", 0
-                db TokNE, "!=", 0
-                db TokInt, "int ", 0
-                db TokNewID, "id ", 0
-                db $ff
-
-                endp
-
-                endif                   ; ---- END OF DEBUGGING CODE ----
-
 
 
 

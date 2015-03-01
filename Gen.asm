@@ -1,26 +1,22 @@
 
 ; Gen (hl = src, bc = length; de = ptr to code byte after addition)
 ;
-Gen             proc
-
-                push hl
+Gen             push hl
                 ld hl, (CodePtr)
                 push hl
                 add hl, bc
                 ld de, (CodeTop)
                 and a
                 sbc hl, de
-                jp nc, outOfMemory
+                jp nc, gOutOfMemory
                 pop de
                 pop hl
                 ldir
                 ld (CodePtr), de
                 ret
 
-outOfMemory     halt
+gOutOfMemory    halt
                 ret
-
-                endp
 
 GenRet          ld hl, (CodePtr)
                 ld (hl), $c9            ; $c9 = 'ret'

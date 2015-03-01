@@ -20,7 +20,7 @@ else
 CharSet         dw RomChars
 endif
 PutAttrPtr      dw AttrFile
-PutAttr         db Bright + BlackInk + WhitePaper
+PutAttr         db Bright + BlackPaper + WhiteInk
 
 GlobalSymTab    ds 256
 LocalSymTab     ds 256

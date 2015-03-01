@@ -6,6 +6,7 @@
 
 debug           equ false
 usePropChars    equ true
+noScroll        equ false ;true
 
 Start           call Cls
                 ld hl, testProg55: call runTest
