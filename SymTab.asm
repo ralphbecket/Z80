@@ -126,6 +126,9 @@ ResetSymTabs    ld hl, GlobalSymTab     ; XXX Should free entries from symtab.
                 ld de, KwGoto
                 ld a, TokGoto
                 call addKw
+                ld de, KwGosub
+                ld a, TokGosub
+                call addKw
                 ld de, KwElse
                 ld a, TokElse
                 call addKw
@@ -135,8 +138,8 @@ ResetSymTabs    ld hl, GlobalSymTab     ; XXX Should free entries from symtab.
                 ld de, KwFun
                 ld a, TokFun
                 call addKw
-                ld de, KwRet
-                ld a, TokRet
+                ld de, KwReturn
+                ld a, TokReturn
                 call addKw
                 ld de, KwInt
                 ld a, TypeInt

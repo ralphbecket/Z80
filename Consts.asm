@@ -104,7 +104,8 @@ KwGoto          db "goto", 0
 KwElse          db "else", 0
 KwElif          db "elif", 0
 KwFun           db "fun", 0
-KwRet           db "ret", 0
+KwGosub         db "gosub", 0
+KwReturn        db "return", 0
 KwInt           db "int", 0
 KwInts          db "ints", 0
 KwStr           db "str", 0
@@ -143,7 +144,8 @@ TokGoto         equ $90
 TokElse         equ $91
 TokElif         equ $92
 TokFun          equ $93
-TokRet          equ $94
+TokReturn       equ $94
+TokGosub        equ $95
 TokInt          equ TypeInt
 TokInts         equ TypeInts
 TokStr          equ TypeStr

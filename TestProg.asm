@@ -9,7 +9,7 @@ usePropChars    equ true
 noScroll        equ false ;true
 
 Start           call Cls
-                ld hl, testProg55: call runTest
+;                ld hl, testProg55: call runTest
                 ld hl, testProg0: call runTest
                 ld hl, testProg1: call runTest
                 ld hl, testProg2: call runTest
@@ -72,6 +72,7 @@ Start           call Cls
                 ld hl, testProg59: call runTest
                 ld hl, testProg60: call runTest
                 ld hl, testProg61: call runTest
+                ld hl, testProg62: call runTest
 
                 halt ; test complete!
 
@@ -150,6 +151,7 @@ testProg58      db "x = 11 y = x / 10", 0
 testProg59      db "x = -10 y = x / 2", 0
 testProg60      db "x = 10 y = x / -2", 0
 testProg61      db "x = -10 y = x / -2", 0
+testProg62      db "x = 0 gosub l1 gosub l1 return :l1 x = x + 1 return", 0
 
                 include "Prog.asm"
                 include "Expr.asm"

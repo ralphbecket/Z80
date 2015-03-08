@@ -107,6 +107,10 @@ pID             ld a, (hl)
                 jp z, pEnd
                 cp TokGoto
                 jp z, pGoto
+                cp TokGosub
+                jp z, pGosub
+                cp TokReturn
+                jp z, pReturn
                 halt                    ; Unknown keyword!
 
 pAssgt          push hl                 ; Save the assignment target details.
@@ -244,36 +248,47 @@ pDefLabelLp     ld e, (hl)
 
 pLabelReuseError halt ; Trying to redefine a symbol.
 
-pGoto           call Scan
+pGoto           ld hl, gotoCode
+                jp pGoX
+
+pGosub          ld hl, gosubCode
+
+pGoX            ld (pGenGoX + 1), hl            ; Okay, this is somewhat distasteful!
+                inc hl
+                ld (pGoXSMC1 + 1), hl
+                ld (pGoXSMC2 + 1), hl
+                ld (pGoXSMC3 + 2), hl
+
+                call Scan
                 cp TokNewID
-                jp z, pGotoNewLabel
+                jp z, pGoXNewLabel
                 cp TokID
-                jp z, pGotoLabel
+                jp z, pGoXLabel
 
-pGotoSyntaxError halt ; Expected a goto label.
+pGoXSyntaxError halt ; Expected a goto/gosub label.
 
-pGotoNewLabel   ld a, TypeUndefdLabel
+pGoXNewLabel    ld a, TypeUndefdLabel
                 ld bc, (ScannedIDStart)
                 ld de, (CodePtr)
                 inc de
                 call AddEntry
                 ld hl, 0
-                ld (gotoCode + 1), hl
-                jp pGenGoto
+pGoXSMC1        ld (gotoCode + 1), hl
+                jp pGenGoX
 
-pGotoLabel      ld a, (hl)
+pGoXLabel       ld a, (hl)
                 inc hl
                 cp TypeUndefdLabel
-                jp z, pGotoUndefdLabel
+                jp z, pGoXUndefdLabel
                 cp TypeLabel
-                jp nz, pGotoSyntaxError
+                jp nz, pGoXSyntaxError
                 ld a, (hl)
                 inc hl
                 ld h, (hl)
                 ld l, a
-                ld (gotoCode + 1), hl
+pGoXSMC2        ld (gotoCode + 1), hl
 
-pGenGoto        ld hl, gotoCode
+pGenGoX         ld hl, gotoCode         ; SMC!
                 ld bc, gotoLength
                 call Gen
                 jp Prog
@@ -281,14 +296,24 @@ pGenGoto        ld hl, gotoCode
 gotoCode        jp 0
 gotoLength      equ * - gotoCode
 
-pGotoUndefdLabel ld e, (hl)
+gosubCode       call 0
+gusubLength     equ * - gosubCode
+
+pGoXUndefdLabel ld e, (hl)
                 inc hl
                 ld d, (hl)
-                ld (gotoCode + 1), de
+pGoXSMC3        ld (gotoCode + 1), de
                 ld de, (CodePtr)
                 inc de
                 ld (hl), d
                 dec hl
                 ld (hl), e
-                jp pGenGoto
+                jp pGenGoX
 
+pReturn         ld hl, returnCode
+                ld bc, returnLength
+                call Gen
+                jp Prog
+
+returnCode      ret
+returnLength    equ * - returnCode
