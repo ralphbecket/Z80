@@ -1,0 +1,290 @@
+; PutC(a = char)
+;
+                if usePropChars
+                include "PutPropCh.asm"
+PutCh           equ PutPropCh
+                else
+PutCh           cp 13
+                jr z, PutNL
+
+                sub 32
+                jr nc, pCharOK
+                ld a, '?' - 32
+pCharOK         push af                 ; Save the char.
+
+                call MaybeScroll
+
+                ld hl, (PutAttrPtr)     ; Write the attr.
+                ld a, (PutAttr)
+                ld (hl), a
+
+                inc hl
+                ld (PutAttrPtr), hl
+                dec hl
+
+                ld a, h                 ; Convert to disp ptr.
+                and %00001111
+                add a, a
+                add a, a
+                add a, a
+                ld h, a
+                ex de, hl               ; de = disp ptr.
+
+                pop af                  ; Retrieve the char.
+                ld h, 0
+                ld l, a
+                add hl, hl
+                add hl, hl
+                add hl, hl              ; hl = char bitmap ptr.
+                ld bc, (CharSet)
+                add hl, bc
+
+                loop 8                  ; Draw the char bitmap.
+                ld a, (hl)
+                if usePropChars
+                and %11111000          ; Hack when using PropChars.
+                endif
+                ld (de), a
+                inc hl
+                inc d
+                lend
+
+                ret
+
+                endif
+
+PutSpc          ld a, ' '
+                jp PutCh
+
+PutNL           if usePropChars
+                xor a
+                ld (PutPropX), a
+                endif
+
+                ld hl, (PutAttrPtr)
+                ld de, $20
+                add hl, de
+                ld a, l
+                and %11100000
+                ld l, a
+                ld (PutAttrPtr), hl
+                ret
+
+; PutStr (hl = null terminated string ptr; hl = addr of terminating null).
+;
+PutStr          ld a, (hl)
+                and a
+                ret z
+                push hl
+                call PutCh
+                pop hl
+                inc hl
+                jr PutStr
+
+; Puts (hl = null terminated string ptr).
+;
+PutStrNL        call PutStr
+                jp PutNL
+
+; PutStrN (hl = string ptr, de = max chars to print)
+;
+PutStrN         ld a, d
+                or e
+                ret z
+                ld a, (hl)
+                or a
+                ret z
+                inc hl
+                dec de
+                push hl
+                push de
+                call PutCh
+                pop de
+                pop hl
+                jp PutStrN
+
+; PutInt(hl = int)
+;
+PutInt          bit 7, h
+                jr z, PutUInt
+                push hl                 ; Print a '-' and negate.
+                ld a, '-'
+                call PutCh
+                pop hl
+                and a
+                ld de, 0
+                ex de, hl
+                sbc hl, de
+
+; PutUInt(hl = int).
+;
+PutUInt         ld a, h
+                or l
+                jr nz, pNotZero
+                ld a, '0'               ; Handle zero as a special case.
+                jp PutCh
+
+pNotZero        ld b, 0                 ; Note if we've output anything.
+
+                xor a
+                ld de, 10000
+                call putColumn
+                ld de, 1000
+                call putColumn
+                ld de, 100
+                call putColumn
+                ld de, 10
+                call putColumn
+                ld de, 1
+                call putColumn
+
+                ret
+
+putColumn       inc a
+                sbc hl, de
+                jr nc, putColumn
+                add hl, de
+                dec a
+
+putDigit        add a, b
+                ret z                   ; Don't print leading zeroes.
+                sub b
+                ld b, 1
+                push hl
+                push bc
+                add a, '0'
+                call PutCh
+                pop bc
+                pop hl
+                xor a
+                ret
+
+                endp
+
+PutHexDigit     and $0f
+                add a, '0'
+                cp '0' + 10
+                jr c, pPutX
+                add a, 'a' - '0' - 10
+pPutX           jp PutCh
+                endp
+
+PutHexByte      push af
+                rrca
+                rrca
+                rrca
+                rrca
+                call PutHexDigit
+                pop af
+                jp PutHexDigit
+
+PutHexWord      push hl
+                ld a, h
+                call PutHexByte
+                pop hl
+                ld a, l
+                jp PutHexByte
+
+MaybeScroll     ld hl, (PutAttrPtr)
+                ld a, h
+                cp $5b
+                ret c
+                if noScroll
+                call Cls
+                else
+                call Scroll
+                ld hl, AttrFile + $300 - $20
+                ld (PutAttrPtr), hl
+                endif
+                ret
+
+Scroll          ld hl, AttrFile
+                ld (toAttrPtr), hl
+                ld hl, AttrFile + $20
+                ld (fromAttrPtr), hl
+                ld hl, DispFile
+                ld (toDispPtr), hl
+                ld a, 23
+                ld (lineCount), a
+
+pScroll1        ld de, (toAttrPtr)      ; Copy a line of attrs.
+                ld hl, (fromAttrPtr)
+                ld bc, $20
+                ldir
+                ld (fromAttrPtr), hl
+                ld (toAttrPtr), de
+
+                ex de, hl               ; Get the to/from disp ptrs.
+                ld de, (toDispPtr)
+                ld a, h
+                and %00001111
+                add a, a
+                add a, a
+                add a, a
+                ld h, a
+                ld (toDispPtr), hl
+
+                ld b, 8                 ; Copy the row bitmaps.
+pScroll2        push bc
+                push hl
+                push de
+                ld bc, $20
+                ldir
+                pop de
+                pop hl
+                inc h
+                inc d
+                pop bc
+                djnz pScroll2
+
+                ld hl, lineCount        ; Repeat until done.
+                dec (hl)
+                jr nz, pScroll1
+
+                call GetBlankPAttr      ; Clear the last line.
+                ld hl, (toAttrPtr)
+                ld (hl), a
+                ld d, h
+                ld e, l
+                inc de
+                ld bc, $20 - 1
+                ldir
+
+                ret
+
+toAttrPtr       dw 0
+fromAttrPtr     dw 0
+toDispPtr       dw 0
+lineCount       db 0
+
+Cls             if usePropChars
+                xor a
+                ld (PutPropX), a
+                endif
+
+                call GetBlankPAttr
+                ld hl, AttrFile
+                ld (PutAttrPtr), hl
+                ld de, AttrFile + 1
+                ld bc, $20 * 24 - 1
+                ld (hl), a
+                ldir
+                ret
+
+GetBlankPAttr   ld a, (PutAttr)
+
+                ld c, a
+
+                and %00111000
+                ld b, a
+                rrca
+                rrca
+                rrca
+                add a, b
+
+                bit 6, c
+                ret z
+                set 6, a
+                ret
+
+
