@@ -12,7 +12,8 @@
 ; - Track used cells.
 ; - Handle blanking based on prev/current used cells.
 
-Start           nop
+Start           ei
+                call Demo
                 ld de, GhostBitmap
                 ;ld de, SpriteBitmapC
                 ld hl, GhostFrames
@@ -30,8 +31,55 @@ Start           nop
                 call BlankPrevCells
                 halt
 
-Demo            nop
+Demo            call ResetBorder
+                call FastDrawCells
+                call CycleBorder
+                call BlankPrevCells
+                ld b, NDemoObjs
+                ld c, 8
+                ld ix, DemoObjs
+DO_X            ld a, (ix + 0)  ; x
+                add a, (ix + 2) ; dx
+                jr c, DO_BounceX
+                cp 256 - 16
+                jr nc, DO_BounceX
+                ld (ix + 0), a
+DO_Y            ld e, a
+                ld a, (ix + 1)  ; y
+                add a, (ix + 3) ; dy
+                jr c, DO_BounceY
+                cp 192 - 16
+                jr nc, DO_BounceY
+                ld a, (ix + 1)
+DO_Colour       ld d, a
+                dec c
+                jr nz, DO_Draw
+                ld c, 7
+DO_Draw         ld hl, GhostFrames
+                push bc
+                call FastDraw16x16
+                pop bc
+                inc ix
+                inc ix
+                inc ix
+                inc ix
+                djnz DO_X
+                nop
+                jp Demo
 
+DO_BounceX      ld a, (ix + 2)
+                neg
+                ld (ix + 2), a
+                ld a, (ix + 0)
+                jp DO_Y
+
+DO_BounceY      ld a, (ix + 3)
+                neg
+                ld (ix + 3), a
+                ld a, (ix + 1)
+                jp DO_Colour
+
+NDemoObjs       equ 8
 DemoObjs        db 120, 88, 4, 2
                 db 120, 88, 2, 4
                 db 120, 88, -2, 4
