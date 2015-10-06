@@ -1,45 +1,59 @@
+; Ralph Becket's ZX Spectrum Fill Challenge.
+; 106 bytes with no meaningful optimization attempts.
+
                 emulate_spectrum "48k"
                 output_szx "FillChallenge.szx", 0, Start
 
 ; Set up the screen with a little test.
 
-                org $4000
-
-                dg ....x.....xx....
-                ds 254
-                dg xxx.....x..x....
-                ds 254
-                dg x....xx..xxx....
-                ds 254
-                dg xx........xx....
-                ds 254
-                dg xxxxxxxxxxxx....
+                org $4000 : dg ...x................x...
+                org $4100 : dg .xx....xxxx..xxxx....xx.
+                org $4200 : dg .x....................x.
+                org $4300 : dg .x....xxxx....xxxx....x.
+                org $4400 : dg x....x....x..x....x....x
+                org $4500 : dg .....x..xxx..x..xxx....x
+                org $4600 : dg .....x..xxx..x..xxx....x
+                org $4700 : dg ......xxxxx...xxxxx....x
+                org $4020 : dg x.....................x.
+                org $4120 : dg .x.........xx.........x.
+                org $4220 : dg .x...x....x.......x...x.
+                org $4320 : dg ..x..xx...x......xx..x..
+                org $4420 : dg ..x..x.x...xx...x.x..x..
+                org $4520 : dg ..x..x..xx....xx..x..x..
+                org $4620 : dg ...x..x...xxxx...x..x...
+                org $4720 : dg ....x..xx......xx..x....
+                org $4040 : dg .....x...xxxxxx...x.....
+                org $4140 : dg ......x..........x......
+                org $4240 : dg .......xxxxxxxxxx.......
 
                 org $5800
-
                 loop $300
                         db %00000111
                 lend
 
                 org $8000
 
-Start           ld d, 5
-                ld e, 1
+Start           ld d, 0
+                ld e, 0
                 call Fill
                 ret
 
                 org $9000
 
+StackBotSentinel equ $ffff
+
 ; Scan-line fill algorithm.
 ;
 ; de = xy.
-Fill            ld hl, 0
-                push hl         ; Push 0 sentinel to mark stack bottom.
+Fill            ld hl, StackBotSentinel
+                push hl         ; Push sentinel to mark stack bottom.
                 push de         ; Push the first stretch to start filling.
 
 FillLp          pop de
+                inc de          ; Check for sentinel.
                 ld a, d
                 or e
+                dec de
                 ret z           ; We've hit the stack bottom sentinel.
 
                 call Peek
@@ -48,7 +62,9 @@ FillLp          pop de
                 ld c, a         ; Zero c, used to track above/below pixels.
 
 ScanL           dec d
-                jp m, ScanLDone ; Hit LHS.
+                ld a, d
+                inc a
+                jr z, ScanLDone ; Hit LHS.
 
                 call Peek
                 jr z, ScanL     ; Still on a blank pixel.

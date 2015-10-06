@@ -19,28 +19,37 @@ Start           nop
                 call Unpack16x16
                 ld ix, GhostFrames
                 call Preshift16x16
-XShift equ 6
-                ld hl, GhostFrames + 0 + XShift * 72 + 4
-                ld de, $5800
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 8 + XShift * 72 + 4
-                ld de, $5820
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 24 + XShift * 72 + 4
-                ld de, $5801
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 32 + XShift * 72 + 4
-                ld de, $5821
-                ld c, $47
-                call FastDrawAdd
-                ld hl, SpriteBitmapB
-                ld de, $5801
-                ld c, $43
-                ; call FastDrawAdd
+                call CycleBorder
+                ld de, $547c
+                ld hl, GhostFrames
+                ld c, 1 * 64 + 6 * 8
+                call Draw16x16
+                call CycleBorder
+
+;XShift equ 6
+                ;ld hl, GhostFrames + 0 + XShift * 72 + 4
+                ;ld de, $5800
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 8 + XShift * 72 + 4
+                ;ld de, $5820
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 24 + XShift * 72 + 4
+                ;ld de, $5801
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 32 + XShift * 72 + 4
+                ;ld de, $5821
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, SpriteBitmapB
+                ;ld de, $5801
+                ;ld c, $43
+                ; call FastDrawAddCell
+
                 call FastDraw
+                call CycleBorder
                 halt
 
 SpriteBitmapA   dw $4488, $1122, $4488, $1122
@@ -69,14 +78,14 @@ GhostBitmap     dg ................
 GhostFrames     ds 8 + 8 * 64
 
                 org $a000
-; Draw all cells in the FD_DrawList.
+; Draw all cells in the FS_DrawList.
 ; Trashes abdehl.
-FastDraw        ld a, (FD_N)
+FastDraw        ld a, (FS_N)
                 and a
                 ret z
                 ld b, a
-                ld (FD_SP), sp
-                ld sp, FD_DrawList
+                ld (FS_SP), sp
+                ld sp, FS_DrawList
 
 FD_Loop         pop hl
                 pop de
@@ -95,28 +104,28 @@ FD_Loop         pop hl
                 ld (hl), d
                 djnz FD_Loop
 
-FD_End          ld sp, (FD_SP)
+FD_End          ld sp, (FS_SP)
                 ret
 
 ; Add a cell to the FD_DrawList.
 ; In: hl = bitmap ptr, de = attr ptr, c = attr.
 ; Out: hl = bitmap ptr + 8.
 ; Trashes abcde.
-FastDrawAdd     push hl
-                ld hl, FD_UsedCells - $5800
+FastDrawAddCell push hl
+                ld hl, FS_UsedCells - $5800
                 add hl, de
                 ld a, (hl)
                 and a
                 jp nz, FDA_Overlapping
 
-                ld a, (FD_N)
-                cp FD_MaxN
+                ld a, (FS_N)
+                cp FS_MaxN
                 jp nc, FDA_Full
                 inc a
-                ld (FD_N), a
+                ld (FS_N), a
                 ld (hl), a
 
-FDA_New         ld hl, (FD_NextFree)
+FDA_New         ld hl, (FS_NextFree)
                 ld (hl), e
                 inc hl
                 ld (hl), d
@@ -135,7 +144,7 @@ FDA_New         ld hl, (FD_NextFree)
                 loop 8
                         ldi
                 lend
-                ld (FD_NextFree), de
+                ld (FS_NextFree), de
                 ret
 
 FDA_Overlapping ld h, 0
@@ -146,7 +155,7 @@ FDA_Overlapping ld h, 0
                 ld e, l
                 add hl, hl
                 add hl, de
-                ld de, FD_DrawList - FD_DrawDataSz + 4
+                ld de, FS_DrawList - FS_CellDataSz + 4
                 add hl, de
                 ex de, hl
                 pop hl
@@ -195,20 +204,22 @@ UP_Lp           ld a, (hl)
 ; In: ix = src.
 ; Out: ix = frame top.
 ; Trashes: abcde.
-Preshift16x16   ld de, 3 * 24 - 16
+Preshift16x16   ld de, 8
+                add ix, de
+                ld de, 3 * 24 - 16
                 ld c, 7
 PS_Lp1          ld b, 16
                 xor a
-PS_Lp2          ld a, (ix + 8 + 0 * 24)
+PS_Lp2          ld a, (ix + 0 * 24)
                 rra
-                ld (ix + 8 + 3 * 24), a
-                ld a, (ix + 8 + 1 * 24)
+                ld (ix + 3 * 24), a
+                ld a, (ix + 1 * 24)
                 rr a
-                ld (ix + 8 + 4 * 24), a
-                ld a, (ix + 8 + 2 * 24)
+                ld (ix + 4 * 24), a
+                ld a, (ix + 2 * 24)
                 rra
+                ld (ix + 5 * 24), a ; Max offset is 127!
                 inc ix
-                ld (ix + 8 + 5 * 24 - 1), a ; Max offset is 127!
                 djnz PS_Lp2
                 add ix, de
                 dec c
@@ -218,31 +229,83 @@ PS_Lp2          ld a, (ix + 8 + 0 * 24)
 ; Draw an unpacked, pre-shifted sprite at the given (x, y) pixel
 ; coordinates.  Note: this does not perform clipping; drawing off
 ; the edges of the display will result in undefined behaviour.
-; In: hl = xy, de = frames ptr.
-Draw16x16       xor a           ; Counting 1-8 for x, A-H for y
-                                ; h = 87654321, l = HGFEDCBA
-                srl h
-                rra
-                srl h
-                rra
-                ld c, a         ; h = 00876543, c = 21000000
-                ld a, h
-                and $01
-                ld b, a         ; b = 00000003
-                ld a, l
-                and $07
-                neg
-                add a, 8
-                or c
-                ld c, a         ; c = 2100zzzz where zzzz = 8 - CBA
-                ex de, hl
-                add hl, bc      ; hl = frames ptr + 32100zzzz
+; In: d = y, e = x, hl = frames ptr, c = attr.
+Draw16x16       push bc
 
-FD_N            db 0
-FD_MaxN         equ 100
-FD_SP           dw 0
-FD_NextFree     dw FD_DrawList
-FD_DrawDataSz   equ 12
-FD_DrawList     ds FD_MaxN * FD_DrawDataSz
-FD_UsedCells    ds 32 * 24
+                ld a, d
+                cpl
+                and 7
+                ld c, a
+                ld a, e
+                and 7
+                rla
+                rla
+                rla
+                or c
+                ld c, a
+                and $f8
+                rla
+                rla
+                ld b, 0
+                rla
+                rl b
+                or c
+                ld c, a
+                inc bc
+                add hl, bc      ; hl = frame ptr.
+
+                ld a, d
+                rra
+                rra
+                rra
+                rra
+                rr e
+                rra
+                rr e
+                rra
+                rr e
+                and $03
+                or $58
+                ld d, a         ; de = attr ptr.
+
+                loop 3
+                        loop 3
+                                pop bc
+                                push bc
+                                push de
+                                call FastDrawAddCell
+                                pop de
+                                ex de, hl
+                                ld bc, 32
+                                add hl, bc
+                                ex de, hl
+                        lend
+                        ex de, hl
+                        ld bc, 1 - 3 * 32
+                        add hl, bc
+                        ex de, hl
+                lend
+                pop bc
+                ret
+
+ResetBorder     ld a, 7
+                ld (FS_BorderColour), a
+CycleBorder     ld a, (FS_BorderColour)
+                inc a
+                and $07
+                ld (FS_BorderColour), a
+                jr z, CycleBorder
+                out (254), a
+                ret
+
+FS_N            db 0
+FS_PrevN        db 0
+FS_MaxN         equ 100
+FS_SP           dw 0
+FS_NextFree     dw FS_DrawList
+FS_CellDataSz   equ 12
+FS_DrawList     ds FS_MaxN * FS_CellDataSz
+FS_UsedCells    ds 32 * 24
+FS_PrevCells    ds FS_MaxN * 2
+FS_BorderColour db 0
 

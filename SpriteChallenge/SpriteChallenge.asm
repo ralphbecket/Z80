@@ -2,70 +2,86 @@
                 output_szx "SpriteChallenge.szx", 0, Start
                 org $8000
 
-; Clear the display.
-Start           ld hl, $4000
+Start           ld hl, $4000    ; Clear the display.
                 ld de, $4001
-                ld bc, $1B00 - 1
-                ld (hl), $0f
+                ld bc, $1800
+                ld (hl), $22
+                ldir
+                ld (hl), 7 * 8
+                ld bc, $300 - 1
                 ldir
 
-                ld hl, $0303
-                ld de, TestSprite
+                ld hl, $8060    ; Animate a sprite.
+                ld b, 256 / 3
+                ld de, GhostSprite
+Lp              push hl
+                push de
+                push bc
                 call DrawSprite
+                pop bc
+                pop de
+                pop hl
+                ld a, 3: add a, h: ld h, a
+                ld a, 3: add a, l: ld l, a
+                djnz Lp
                 halt
 
-; hl = xy, de = src.
-DrawSprite      ld (XY), hl
-                ld hl, 00
-                ld (IJ), hl
-                ld (Src), de
+; hl = XY, de = src.
+;
+; Sprite data is 16 words of inverted mask (i.e., a 0 denotes the
+; corresponding screen pixel is to be preserved) followed by 16
+; words of bitmap.
+;
+; Internally, we keep XY and the offset IJ (I, J in 0..15) in
+; one register bank, and we keep the sprite pointer and row bits
+; in another register bank.
+
+profile = true
+
+DrawSprite      push de         ; Set-up code.
+                exx
+                pop de          ; Src = Src - 2
+                exx
+                ld de, $0fff    ; I = 15, J = -1
+                push de
+                ld (XY), hl
+                ld c, 0         ; c = 0 => Masking.
+                call NextI
+                inc c           ; c = 1 => Drawing.
+                pop de          ; I = 15, J = -1
+
+NextI           inc d           ; I = I + 1
+                bit 4, d        ; I == 16 ?
+                jr z, Plot
+
+NextJ           inc e           ; J = J + 1
+                bit 4, e        ; J == 16 ?
+                ret nz
+                ld d, 0
+
+FetchRow        exx
+                ld a, (de)      ; Bits := Src[0].Src[1]
+                ld h, a         ; Src += 2
+                inc de
                 ld a, (de)
                 ld l, a
                 inc de
-                ld a, (de)
-                ld h, a
-                ld (Bits), hl
-; Fetch the display address at (XY) + (IJ).
-MainLp          ld hl, 00
+                exx
+
+Plot            ld hl, 00       ; h = X, l = Y -- SMC!
 XY              equ $ - 2
-                ld de, 00
-IJ              equ $ - 2
-                add hl, de
-                jr nc, ChkYJ
-; We've passed the right edge of the screen.
-; Advance to the next row.
-NextRow         ld d, 0
-                inc e
-                bit 4, e        ; 16 < J?
-                ret nz
-                ld (IJ), de
-; Fetch the next row of bitmap data.
-                ld hl, 00
-Src             equ $ - 2
-                inc hl
-                inc hl
-                ld (Src), hl
-                ld a, (hl)
-                inc hl
-                ld h, (hl)
-                ld l, a
-                ld (Bits), hl
-                jr MainLp
-; Check we haven't hit the bottom of the display.
-ChkYJ           ld a, l
-                cp 192
-                ret nc
-; Increment IJ for the next iteration.
-                inc d
-                bit 4, d        ; 16 < I?
-                jr nz, NextRow
-                ld (IJ), de
-; Convert hl = (XY) + (IJ) into a display address and pixel offset.
-; hl = xy; hl = disp addr, b = pixel in byte from left (0..7).
-ScrPos          ex de, hl
+                add hl, de      ; h = X + I, l = Y + J
+                jr c, NextJ     ; If 256 <= X + I
+
+                ld a, l
+                cp 192          ; Y + J < 192 ?
+                jr nc, NextJ
+
+ScrPos          push de
+                ex de, hl       ; Provided by John Metcalf.
                 ld a, d
                 and 7
-                ld b, a
+                ld b, a         ; b = num px from left in byte.
                 ld a, e
                 rra
                 scf
@@ -73,6 +89,8 @@ ScrPos          ex de, hl
                 or a
                 rra
                 ld l, a
+                xor e
+                and 248
                 xor e
                 ld h, a
                 ld a, l
@@ -82,38 +100,67 @@ ScrPos          ex de, hl
                 rrca
                 rrca
                 rrca
-                ld l, a
-; Fetch the next bit to emit and rotate it into position.
-                ex de, hl
-                ld hl, 00
-Bits            equ $ - 2
+                ld l, a         ; hl = display byte addr.
+                pop de
+
+FetchBit        exx
                 xor a
                 add hl, hl
-                rra
-RotLp           rrca
-                djnz RotLp      ; This won't win prizes for speed!
-                ex de, hl
-; XXX Mask or draw the bit.
-Draw            or (hl)
-                ld (hl), a
-                jr MainLp
-Mask            and (hl)
-                ld (hl), a
-                jr MainLp
+                rra             ; a = msb(Bits), Bits <<= 1
+                exx
 
-TestSprite      dg ......xxxx......
-                dg ....xxxxxxxx....
+RotateBit       rrca            ; a <<= b
+                djnz RotateBit  ; No prizes for speed :-)
+
+; Mask or draw the bit.
+                bit 0, c
+                jr z, MaskBit
+
+DrawBit         or (hl)
+                ld (hl), a
+                jr NextI
+
+MaskBit         cpl
+                and (hl)
+                ld (hl), a
+                jr NextI
+
+ZZZDrawSpriteSize equ $ - DrawSprite
+
+profile = false
+
+GhostSprite     dg .....xxxxxx.....
                 dg ...xxxxxxxxxx...
                 dg ..xxxxxxxxxxxx..
                 dg .xxxxxxxxxxxxxx.
                 dg .xxxxxxxxxxxxxx.
+                dg .xxxxxxxxxxxxxx.
                 dg xxxxxxxxxxxxxxxx
                 dg xxxxxxxxxxxxxxxx
-                dg .xxxxxxxxxxxxxx.
-                dg .xxxxxxxxxxxxxx.
-                dg ..xxxxxxxxxxxx..
-                dg ...xxxxxxxxxx...
-                dg ....xxxxxxxx....
-                dg ......xxxx......
+                dg xxxxxxxxxxxxxxxx
+                dg xxxxxxxxxxxxxxxx
+                dg xxxxxxxxxxxxxxxx
+                dg xxxxxxxxxxxxxxxx
+                dg xxxxxxxxxxxxxxxx
+                dg xxxxxxxxxxxxxxxx
+                dg .xxxx.xxxx.xxxx.
+                dg ..xx...xx...xx..
+
+                dg .....xxxxxx.....
+                dg ...xx......xx...
+                dg ..x..........x..
+                dg .x.xx....xx...x.
+                dg .xx..x..x..x..x.
+                dg .xxx.x..xx.x..x.
+                dg x.xx.x..xx.x...x
+                dg x.xx.x..xx.x...x
+                dg x..xx....xx....x
+                dg x..............x
+                dg x..............x
+                dg x..............x
+                dg x..............x
+                dg x....x....x....x
+                dg .x..x.x..x.x..x.
+                dg ..xx...xx...xx..
 
 

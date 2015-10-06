@@ -7,37 +7,45 @@
 ; - DONE Add new cell to draw list.
 ; - DONE Handle overlapping cells.
 ; - DONE Unpack a sprite bitmap.
-; - Preshift a sprite bitmap into a full set of frames.
+; - DONE Preshift a sprite bitmap into a full set of frames.
+; - Add draw cells for a 16x16 sprite at (x,y) pixels (no clipping).
 ; - Track used cells.
 ; - Handle blanking based on prev/current used cells.
 
 Start           nop
                 ld de, GhostBitmap
-                ld de, SpriteBitmapC
+                ;ld de, SpriteBitmapC
                 ld hl, GhostFrames
                 call Unpack16x16
                 ld ix, GhostFrames
                 call Preshift16x16
-                ld hl, GhostFrames + 8
-                ld de, $5800
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 16
-                ld de, $5820
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 32
-                ld de, $5801
-                ld c, $47
-                call FastDrawAdd
-                ld hl, GhostFrames + 40
-                ld de, $5821
-                ld c, $47
-                call FastDrawAdd
-                ld hl, SpriteBitmapB
-                ld de, $5801
-                ld c, $43
-                ; call FastDrawAdd
+XShift equ 6
+                ld de, $0000
+                ld hl, GhostFrames
+                ld c, 1 * 64 + 6 * 8
+                call Draw16x16
+
+                ;ld hl, GhostFrames + 0 + XShift * 72 + 4
+                ;ld de, $5800
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 8 + XShift * 72 + 4
+                ;ld de, $5820
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 24 + XShift * 72 + 4
+                ;ld de, $5801
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, GhostFrames + 32 + XShift * 72 + 4
+                ;ld de, $5821
+                ;ld c, $47
+                ;call FastDrawAddCell
+                ;ld hl, SpriteBitmapB
+                ;ld de, $5801
+                ;ld c, $43
+                ; call FastDrawAddCell
+
                 call FastDraw
                 halt
 
@@ -67,14 +75,14 @@ GhostBitmap     dg ................
 GhostFrames     ds 8 + 8 * 64
 
                 org $a000
-; Draw all cells in the FD_DrawList.
+; Draw all cells in the FS_DrawList.
 ; Trashes abdehl.
-FastDraw        ld a, (FD_N)
+FastDraw        ld a, (FS_N)
                 and a
                 ret z
                 ld b, a
-                ld (FD_SP), sp
-                ld sp, FD_DrawList
+                ld (FS_SP), sp
+                ld sp, FS_DrawList
 
 FD_Loop         pop hl
                 pop de
@@ -93,28 +101,28 @@ FD_Loop         pop hl
                 ld (hl), d
                 djnz FD_Loop
 
-FD_End          ld sp, (FD_SP)
+FD_End          ld sp, (FS_SP)
                 ret
 
 ; Add a cell to the FD_DrawList.
 ; In: hl = bitmap ptr, de = attr ptr, c = attr.
 ; Out: hl = bitmap ptr + 8.
 ; Trashes abcde.
-FastDrawAdd     push hl
-                ld hl, FD_UsedCells - $5800
+FastDrawAddCell push hl
+                ld hl, FS_UsedCells - $5800
                 add hl, de
                 ld a, (hl)
                 and a
                 jp nz, FDA_Overlapping
 
-                ld a, (FD_N)
-                cp FD_MaxN
+                ld a, (FS_N)
+                cp FS_MaxN
                 jp nc, FDA_Full
                 inc a
-                ld (FD_N), a
+                ld (FS_N), a
                 ld (hl), a
 
-FDA_New         ld hl, (FD_NextFree)
+FDA_New         ld hl, (FS_NextFree)
                 ld (hl), e
                 inc hl
                 ld (hl), d
@@ -133,7 +141,7 @@ FDA_New         ld hl, (FD_NextFree)
                 loop 8
                         ldi
                 lend
-                ld (FD_NextFree), de
+                ld (FS_NextFree), de
                 ret
 
 FDA_Overlapping ld h, 0
@@ -144,7 +152,7 @@ FDA_Overlapping ld h, 0
                 ld e, l
                 add hl, hl
                 add hl, de
-                ld de, FD_DrawList - FD_DrawDataSz + 4
+                ld de, FS_DrawList - FS_CellDataSz + 4
                 add hl, de
                 ex de, hl
                 pop hl
@@ -191,31 +199,99 @@ UP_Lp           ld a, (hl)
 ; Pre-shift a sprite frame to make the next seven,
 ; shifted consecutive pixels to the right.
 ; In: ix = src.
-Preshift16x16   ld de, 3 * 24 - 16
+; Out: ix = frame top.
+; Trashes: abcde.
+Preshift16x16   ld de, 8
+                add ix, de
+                ld de, 3 * 24 - 16
                 ld c, 7
 PS_Lp1          ld b, 16
                 xor a
-PS_Lp2          ld a, (ix + 8 + 0 * 24)
+PS_Lp2          ld a, (ix + 0 * 24)
                 rra
-                ld (ix + 8 + 3 * 24), a
-                ld a, (ix + 8 + 1 * 24)
+                ld (ix + 3 * 24), a
+                ld a, (ix + 1 * 24)
                 rr a
-                ld (ix + 8 + 4 * 24), a
-                ld a, (ix + 8 + 2 * 24)
+                ld (ix + 4 * 24), a
+                ld a, (ix + 2 * 24)
                 rra
+                ld (ix + 5 * 24), a ; Max offset is 127!
                 inc ix
-                ld (ix + 8 + 5 * 24 - 1), a ; Max offset is 127!
                 djnz PS_Lp2
                 add ix, de
                 dec c
                 jr nz PS_Lp1
                 ret
 
-FD_N            db 0
-FD_MaxN         equ 100
-FD_SP           dw 0
-FD_NextFree     dw FD_DrawList
-FD_DrawDataSz   equ 12
-FD_DrawList     ds FD_MaxN * FD_DrawDataSz
-FD_UsedCells    ds 32 * 24
+; Draw an unpacked, pre-shifted sprite at the given (x, y) pixel
+; coordinates.  Note: this does not perform clipping; drawing off
+; the edges of the display will result in undefined behaviour.
+; In: d = y, e = x, hl = frames ptr, c = attr.
+Draw16x16       push bc
+
+                ld a, d
+                cpl
+                and 7
+                ld c, a
+                ld a, e
+                and 7
+                rla
+                rla
+                rla
+                or c
+                ld c, a
+                and $f8
+                rla
+                rla
+                ld b, 0
+                rla
+                rl b
+                or c
+                ld c, a
+                inc bc
+                add hl, bc      ; hl = frame ptr.
+
+                ld a, d
+                rra
+                rra
+                rra
+                rra
+                rr e
+                rra
+                rr e
+                rra
+                rr e
+                and $03
+                or $58
+                ld d, a         ; de = attr ptr.
+
+                loop 3
+                        loop 3
+                                pop bc
+                                push bc
+                                push de
+                                call FastDrawAddCell
+                                pop de
+                                ex de, hl
+                                ld bc, 32
+                                add hl, bc
+                                ex de, hl
+                        lend
+                        ex de, hl
+                        ld bc, 1 - 3 * 32
+                        add hl, bc
+                        ex de, hl
+                lend
+                pop bc
+                ret
+
+FS_N            db 0
+FS_PrevN        db 0
+FS_MaxN         equ 100
+FS_SP           dw 0
+FS_NextFree     dw FS_DrawList
+FS_CellDataSz   equ 12
+FS_DrawList     ds FS_MaxN * FS_CellDataSz
+FS_UsedCells    ds 32 * 24
+FS_PrevCells    ds FS_MaxN * 2
 
