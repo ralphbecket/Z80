@@ -8,9 +8,10 @@
 ; - DONE Handle overlapping cells.
 ; - DONE Unpack a sprite bitmap.
 ; - DONE Preshift a sprite bitmap into a full set of frames.
-; - Add draw cells for a 16x16 sprite at (x,y) pixels (no clipping).
-; - Track used cells.
-; - Handle blanking based on prev/current used cells.
+; - DONE Add draw cells for a 16x16 sprite at (x,y) pixels (no clipping).
+; - DONE Track used cells.
+; - DONE Handle blanking based on prev/current used cells.
+; - DONE Add a nifty demo.
 
 Start           ei
                 ld de, GhostBitmap
@@ -81,12 +82,12 @@ DO_BounceY      ld a, (ix + 3)
 NDemoObjs       equ 8
 DemoObjs        db 120, 88, 4, 2
                 db 120, 88, 3, 4
-                db 120, 88, -2, 4
+                db 120, 88, -2, 5
                 db 120, 88, -4, 3
-                db 120, 88, -4, -2
+                db 120, 88, -5, -2
                 db 120, 88, -3, -4
                 db 120, 88, 2, -4
-                db 120, 88, 4, -3
+                db 120, 88, 5, -3
 
 DO_N            db 8
 

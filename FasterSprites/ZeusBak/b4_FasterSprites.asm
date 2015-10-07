@@ -32,7 +32,7 @@ Start           ei
                 halt
 
 Demo            call ResetBorder
-                ld b, 3;NDemoObjs
+                ld b, NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
@@ -79,8 +79,8 @@ DO_BounceY      ld a, (ix + 3)
                 jp DO_Colour
 
 NDemoObjs       equ 8
-DemoObjs        db 0, 0, 4, 2
-                db 0, 0, 2, 4
+DemoObjs        db 120, 88, 4, 2
+                db 120, 88, 2, 4
                 db 120, 88, -2, 4
                 db 120, 88, -4, 2
                 db 120, 88, -4, -2

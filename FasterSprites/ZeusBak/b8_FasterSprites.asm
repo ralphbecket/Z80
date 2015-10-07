@@ -37,14 +37,12 @@ Demo            call ResetBorder
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
                 add a, (ix + 2) ; dx
-                jr c, DO_BounceX
                 cp 256 - 16
                 jr nc, DO_BounceX
                 ld (ix + 0), a
 DO_Y            ld e, a
                 ld a, (ix + 1)  ; y
                 add a, (ix + 3) ; dy
-                jr c, DO_BounceY
                 cp 192 - 16
                 jr nc, DO_BounceY
                 ld (ix + 1), a
@@ -263,6 +261,7 @@ BK_Reset        ld a, (FS_N)
                 ld sp, FS_UsedCellList
                 ld hl, FS_PrevCellList
                 xor a
+                ld (FS_N), a
 
 BK_ResetLp      pop de
                 ld (de), a

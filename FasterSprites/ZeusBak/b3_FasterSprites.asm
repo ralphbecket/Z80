@@ -32,7 +32,7 @@ Start           ei
                 halt
 
 Demo            call ResetBorder
-                ld b, 3;NDemoObjs
+                ld b, NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
@@ -247,7 +247,7 @@ BK_BlankLp      pop hl
                 cp (hl)
                 jr nz, BK_BlankNext
                 add hl, de
-                ld (hl), $ff      ; SMC!
+                ld (hl), $00      ; SMC!
 FastDrawBlankAttr equ $ - 1
 BK_BlankNext    djnz BK_BlankLp
                 ld sp, (FS_SP)

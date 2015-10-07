@@ -32,19 +32,17 @@ Start           ei
                 halt
 
 Demo            call ResetBorder
-                ld b, 1;NDemoObjs
+                ld b, 2;NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
                 add a, (ix + 2) ; dx
-                jr c, DO_BounceX
                 cp 256 - 16
                 jr nc, DO_BounceX
                 ld (ix + 0), a
 DO_Y            ld e, a
                 ld a, (ix + 1)  ; y
                 add a, (ix + 3) ; dy
-                jr c, DO_BounceY
                 cp 192 - 16
                 jr nc, DO_BounceY
                 ld (ix + 1), a

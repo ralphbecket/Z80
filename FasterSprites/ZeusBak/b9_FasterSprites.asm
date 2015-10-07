@@ -32,7 +32,7 @@ Start           ei
                 halt
 
 Demo            call ResetBorder
-                ld b, 2;NDemoObjs
+                ld b, 1;NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
@@ -263,6 +263,7 @@ BK_Reset        ld a, (FS_N)
                 ld sp, FS_UsedCellList
                 ld hl, FS_PrevCellList
                 xor a
+                ld (FS_N), a
 
 BK_ResetLp      pop de
                 ld (de), a

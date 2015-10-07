@@ -80,13 +80,13 @@ DO_BounceY      ld a, (ix + 3)
 
 NDemoObjs       equ 8
 DemoObjs        db 120, 88, 4, 2
-                db 120, 88, 2, 4
+                db 120, 88, 3, 4
                 db 120, 88, -2, 4
-                db 120, 88, -4, 2
+                db 120, 88, -4, 3
                 db 120, 88, -4, -2
-                db 120, 88, -2, -4
+                db 120, 88, -3, -4
                 db 120, 88, 2, -4
-                db 120, 88, 4, -2
+                db 120, 88, 4, -3
 
 DO_N            db 8
 
@@ -247,7 +247,7 @@ BK_BlankLp      pop hl
                 cp (hl)
                 jr nz, BK_BlankNext
                 add hl, de
-                ld (hl), $ff      ; SMC!
+                ld (hl), $00      ; SMC!
 FastDrawBlankAttr equ $ - 1
 BK_BlankNext    djnz BK_BlankLp
                 ld sp, (FS_SP)

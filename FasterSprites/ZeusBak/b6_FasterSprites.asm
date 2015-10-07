@@ -32,7 +32,7 @@ Start           ei
                 halt
 
 Demo            call ResetBorder
-                ld b, 1;NDemoObjs
+                ld b, 3;NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
