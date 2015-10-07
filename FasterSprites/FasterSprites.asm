@@ -20,16 +20,6 @@ Start           ei
                 ld ix, GhostFrames
                 call Preshift16x16
                 call Demo
-
-                ld de, $547c
-                ld hl, GhostFrames
-                ld c, 1 * 64 + 6 * 8
-                call ResetBorder
-                call FastDraw16x16
-                call CycleBorder
-                call FastDrawCells
-                call CycleBorder
-                call BlankPrevCells
                 halt
 
 Demo            call ResetBorder
