@@ -12,14 +12,14 @@
 ; - Track used cells.
 ; - Handle blanking based on prev/current used cells.
 
-Start           nop
-                call Demo
+Start           ei
                 ld de, GhostBitmap
-                ;ld de, SpriteBitmapC
                 ld hl, GhostFrames
                 call Unpack16x16
                 ld ix, GhostFrames
                 call Preshift16x16
+                call Demo
+
                 ld de, $547c
                 ld hl, GhostFrames
                 ld c, 1 * 64 + 6 * 8
@@ -32,10 +32,7 @@ Start           nop
                 halt
 
 Demo            call ResetBorder
-                call FastDrawCells
-                call CycleBorder
-                call BlankPrevCells
-                ld b, NDemoObjs
+                ld b, 2;NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
 DO_X            ld a, (ix + 0)  ; x
@@ -50,10 +47,10 @@ DO_Y            ld e, a
                 jr c, DO_BounceY
                 cp 192 - 16
                 jr nc, DO_BounceY
-                ld a, (ix + 1)
+                ld (ix + 1), a
 DO_Colour       ld d, a
                 dec c
-                jr z, DO_Draw
+                jr nz, DO_Draw
                 ld c, 7
 DO_Draw         ld hl, GhostFrames
                 push bc
@@ -64,7 +61,11 @@ DO_Draw         ld hl, GhostFrames
                 inc ix
                 inc ix
                 djnz DO_X
-                halt
+                nop
+                call CycleBorder
+                call FastDrawCells
+                call CycleBorder
+                call BlankPrevCells
                 jp Demo
 
 DO_BounceX      ld a, (ix + 2)
@@ -80,8 +81,8 @@ DO_BounceY      ld a, (ix + 3)
                 jp DO_Colour
 
 NDemoObjs       equ 8
-DemoObjs        db 120, 88, 4, 2
-                db 120, 88, 2, 4
+DemoObjs        db 0, 0, 4, 2
+                db 0, 0, 2, 4
                 db 120, 88, -2, 4
                 db 120, 88, -4, 2
                 db 120, 88, -4, -2
@@ -406,12 +407,16 @@ FS_N            db 0
 FS_PrevN        db 0
 FS_MaxN         equ 100
 FS_SP           dw 0
+                org $b000 - 2
 FS_DrawListNext dw FS_DrawList
 FS_DrawListCellSz equ 12
 FS_DrawList     ds FS_MaxN * FS_DrawListCellSz
+                org $c000
 FS_UsedCellMap  ds 32 * 24
+                org $d000 - 2
 FS_UsedCellNext dw FS_UsedCellList
 FS_UsedCellList ds FS_MaxN * 2
+                org $e000
 FS_PrevCellList ds FS_MaxN * 2
 FS_BorderColour db 0
 
