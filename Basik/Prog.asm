@@ -9,8 +9,9 @@ CompileProg     call ResetHeap
                 call ResetScan
                 call ResetGen
                 call ResetSymTabs
-                call UnReloc
-                call Reloc
+                ; Disable runtime relocation during testing.
+                ; call UnReloc
+                ; call Reloc
                 ld hl, pEndProg
                 push hl
 
@@ -31,6 +32,24 @@ pEnd            pop hl
 
 pEndProg        cp TokEOF
                 jp nz, pEndProgError
+
+                ; Set up the heap bounds.
+pSetHeapBounds  ld hl, rHeapBot
+                ld de, (CodePtr)
+                inc de
+                ld (hl), e
+                inc hl
+                ld (hl), d              ; rHeapBot initialised.
+                inc hl
+                ld (hl), e
+                inc hl
+                ld (hl), d              ; rHeapPtr initialised.
+                inc hl
+                ld de, (CodeVars)
+                ld (hl), e
+                inc hl
+                ld (hl), d              ; rHeapTop initialised.
+
                 ret
 
 pEndProgError   halt ; Expected EOF.
@@ -49,14 +68,9 @@ pNewID          ld (newEntryPtr), hl    ; This is a new assignment or a new call
 pNewAssgt       call Expr
                 ld (newVarType), a
 
-                ld hl, newVarCode
-                ld bc, newVarLength
-                call Gen
-                dec de
-                dec de
-                ld (newVarPtr), de
-
-                ld (varAssgtCode + 1), de
+                call GenVar
+                ld (varAssgtCode + 1), hl
+                ld (newVarPtr), hl
                 ld hl, varAssgtCode
                 ld bc, varAssgtLength
                 call Gen
@@ -68,22 +82,6 @@ pNewAssgt       call Expr
                 call AddEntry
 
                 jp Prog
-
-; We generate space for variables in-line in the program code,
-; adding a jump around the data.  This has two advantages:
-; (1) it simplifies the compiler and (2) it keeps the entire
-; program in one place which can be followed by the stack and
-; heap (otherwise we'd have to put the vars somewhere else, say
-; growing down from some upper limit, with stack and heap in
-; the middle.  Ugh.  The cost, of course, is 12 Ts every time
-; we pass over this bit of code - a mere bagatelle!
-;
-newVarCode      jr newVarCodeEnd
-                dw 0                    ; GC chain for heap vars.
-                db 0                    ; Var type.
-                dw 0                    ; Var value.
-newVarCodeEnd   nop
-newVarLength    equ newVarCodeEnd - newVarCode
 
 varAssgtCode    ld (0), hl
 varAssgtLength  equ * - varAssgtCode

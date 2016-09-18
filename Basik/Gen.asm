@@ -5,7 +5,7 @@ Gen             push hl
                 ld hl, (CodePtr)
                 push hl
                 add hl, bc
-                ld de, (CodeTop)
+                ld de, (CodeVars)       ; Don't crash into the vars!
                 and a
                 sbc hl, de
                 jp nc, gOutOfMemory
@@ -16,7 +16,6 @@ Gen             push hl
                 ret
 
 gOutOfMemory    halt
-                ret
 
 GenRet          ld hl, (CodePtr)
                 ld (hl), $c9            ; $c9 = 'ret'
@@ -26,5 +25,23 @@ GenRet          ld hl, (CodePtr)
 
 ResetGen        ld hl, (CodeBase)
                 ld (CodePtr), hl
+                ld hl, (CodeTop)
+                ld (CodeVars), hl
+                ret
+
+; GenVar (a = type; hl = ptr to var).
+;
+GenVar          ld hl, (CodeVars)
+                dec hl
+                ld (hl), a
+                dec hl
+                dec hl
+                ld (CodeVars), hl
+                ld de, (CodePtr)
+                and a
+                sbc hl, de
+                jp c, gOutOfMemory
+                ld hl, (CodeVars)
+                inc hl
                 ret
 

@@ -11,6 +11,7 @@ ScannedSymEntry dw 0
 
 CodeBase        dw $e000
 CodePtr         dw $e000
+CodeVars        dw $f000                ; We allocate vars from top down.
 CodeTop         dw $f000
 
 if usePropChars

@@ -19,10 +19,12 @@ Start           ei
                 call Unpack16x16
                 ld ix, GhostFrames
                 call Preshift16x16
+                ld hl, 100
                 call Demo
                 halt
 
-Demo            call ResetBorder
+Demo            push hl
+                call ResetBorder
                 ld b, NDemoObjs
                 ld c, 8
                 ld ix, DemoObjs
@@ -55,7 +57,12 @@ DO_Draw         ld hl, GhostFrames
                 call FastDrawCells
                 call CycleBorder
                 call BlankPrevCells
-                jp Demo
+                pop hl
+                dec hl
+                ld a, h
+                or l
+                jr nz, Demo
+                ret
 
 DO_BounceX      ld a, (ix + 2)
                 neg
@@ -69,7 +76,7 @@ DO_BounceY      ld a, (ix + 3)
                 ld a, (ix + 1)
                 jp DO_Colour
 
-NDemoObjs       equ 8
+NDemoObjs       equ 9
 DemoObjs        db 120, 88, 4, 2
                 db 120, 88, 3, 4
                 db 120, 88, -2, 5
@@ -78,13 +85,16 @@ DemoObjs        db 120, 88, 4, 2
                 db 120, 88, -3, -4
                 db 120, 88, 2, -4
                 db 120, 88, 5, -3
+                db 60, 44, 4, 2
+                db 60, 44, 3, 4
+                db 60, 44, -2, 5
+                db 60, 44, -4, 3
+                db 60, 44, -5, -2
+                db 60, 44, -3, -4
+                db 60, 44, 2, -4
+                db 60, 44, 5, -3
 
 DO_N            db 8
-
-SpriteBitmapA   dw $4488, $1122, $4488, $1122
-SpriteBitmapB   dw $2211, $8844, $2211, $8844
-SpriteBitmapC   db $10, $20, $11, $21, $12, $22, $13, $23, $14, $24, $15, $15, $16, $26, $17, $27
-                db $18, $28, $19, $29, $1a, $2a, $1b, $2b, $1c, $2c, $1d, $2d, $1e, $2e, $1f, $2f
 
 GhostBitmap     dg ................
                 dg ......xxxx......
@@ -109,6 +119,9 @@ GhostFrames     ds 8 + 8 * 64
                 org $a000
 ; Draw all cells in the FS_DrawList.
 ; Trashes abdehl.
+
+        profile = true
+
 FastDrawCells   ld a, (FS_N)
                 and a
                 ret z
@@ -135,6 +148,8 @@ FD_Loop         pop hl
 
 FD_End          ld sp, (FS_SP)
                 ret
+
+        ;profile = false
 
 ; Add a cell to the FD_DrawList.
 ; In: hl = bitmap ptr, de = attr ptr, c = attr.
@@ -224,6 +239,8 @@ FDA_Full        pop hl
                 lend
                 ret
 
+        ;profile = true
+
 BlankPrevCells  ld a, (FS_PrevN)
                 and a
                 jr z, BK_Reset
@@ -268,6 +285,8 @@ BK_ResetLp      pop de
                 ld hl, FS_DrawList
                 ld (FS_DrawListNext), hl
                 ret
+
+        ;profile = false
 
 ; Unpack a 16x16 bitmap into a sprite frame.
 ; In: de = src, hl = tgt.
@@ -395,7 +414,7 @@ CycleBorder     ld a, (FS_BorderColour)
 
 FS_N            db 0
 FS_PrevN        db 0
-FS_MaxN         equ 100
+FS_MaxN         equ 200
 FS_SP           dw 0
                 org $b000 - 2
 FS_DrawListNext dw FS_DrawList

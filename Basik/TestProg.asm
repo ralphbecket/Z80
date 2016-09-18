@@ -90,25 +90,25 @@ runProg         jp (hl)
 
 separator       db "----------------", 0
 testProg0       db "x = 1 + 2", 0
-testProg1       db "x = 1 y = 2", 0
-testProg2       db "x = 1 y = x", 0
-testProg3       db "x = 1 y = x + 1", 0
-testProg4       db "x = 1 y = 2 + x", 0
-testProg5       db "x = 1 y = x + 5 - 3 + x", 0
+testProg1       db "x = 1  y = 2", 0
+testProg2       db "x = 1  y = x", 0
+testProg3       db "x = 1  y = x + 1", 0
+testProg4       db "x = 1  y = 2 + x", 0
+testProg5       db "x = 1  y = x + 5 - 3 + x", 0
 testProg6       db "x = 1 + (3 - 2)", 0
-testProg7       db "x = 1 x = x + 1", 0
-testProg8       db "x = 1 y = 2 x = x + y", 0
+testProg7       db "x = 1  x = x + 1", 0
+testProg8       db "x = 1  y = 2 x = x + y", 0
 testProg9       db "x = 3 = 3", 0
 testProg10      db "x = 3 = 4", 0
-testProg11      db "x = 1 y = x = x", 0
-testProg12      db "x = 1 y = (x + 1) = (x + 1)", 0
-testProg13      db "x = 1 y = (x + 1) = (x + 2)", 0
-testProg14      db "x = 1 y = (x + 1) = x", 0
-testProg15      db "x = 1 y = x = (x + 1)", 0
-testProg16      db "x = 1 if x = 1 x = 2 end", 0
-testProg17      db "x = 1 if x = 3 x = 2 end", 0
-testProg18      db "x = 1 if x = 3 x = 2 else x = 4 end", 0
-testProg19      db "x = 1 if x = 3 x = 2 elif x = 1 x = 5 else x = 4 end", 0
+testProg11      db "x = 1  y = x = x", 0
+testProg12      db "x = 1  y = (x + 1) = (x + 1)", 0
+testProg13      db "x = 1  y = (x + 1) = (x + 2)", 0
+testProg14      db "x = 1  y = (x + 1) = x", 0
+testProg15      db "x = 1  y = x = (x + 1)", 0
+testProg16      db "x = 1  if x = 1  x = 2 end", 0
+testProg17      db "x = 1  if x = 3  x = 2 end", 0
+testProg18      db "x = 1  if x = 3  x = 2 else x = 4 end", 0
+testProg19      db "x = 1  if x = 3  x = 2 elif x = 1  x = 5 else x = 4 end", 0
 testProg20x     db "elif x = 1 x = 2 end", 0
 testProg21x     db "else x = 2 end", 0
 testProg22x     db "end", 0
