@@ -70,7 +70,7 @@ Fire                    ld a, b
                         ret z
 
                         ld a, (NextBulletLo)
-                        cp LastBulletLo
+                        cp TopBulletLo
                         ret z
 
                         ld l, a

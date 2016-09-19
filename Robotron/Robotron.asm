@@ -8,10 +8,15 @@ Main            equ *
 
                 ld a, MagentaPaper
                 call ClearScreen
+                call InitRnd
                 call InitPlayer
                 call InitBullets
+                call InitRobots
+                ld a, 5
+                ld (BotTable), a
 
-MainLoop        call MoveBullets
+MainLoop        call MoveRobots
+                call MoveBullets
                 call MovePlayer
                 halt
                 jp MainLoop
@@ -26,6 +31,8 @@ MainLoop        call MoveBullets
                 include "Keyboard.asm"
                 include "Player.asm"
                 include "Bullets.asm"
+                include "Bots.asm"
+                include "Rnd.asm"
                 include "Util.asm"
 ;                include "TestClearSprite.asm"
 ;                include "TestDrawSprite.asm"
