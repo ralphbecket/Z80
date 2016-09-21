@@ -15,3 +15,18 @@ Move                    ld a, e
                         ret nc
                         ld d, a
                         ret
+
+
+
+CollisionCheck          ld a, e
+                        sub a, c
+                        inc a
+                        inc a
+                        cp 5
+                        ret nc
+                        ld a, d
+                        sub a, b
+                        inc a
+                        inc a
+                        cp 5
+                        ret

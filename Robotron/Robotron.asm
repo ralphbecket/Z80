@@ -6,7 +6,7 @@ ZeusEmulate_SP  equ $FF40
 
 Main            equ *
 
-                ld a, MagentaPaper
+                xor a
                 call ClearScreen
                 call InitRnd
                 call InitPlayer
@@ -18,6 +18,7 @@ Main            equ *
 MainLoop        call MoveRobots
                 call MoveBullets
                 call MovePlayer
+                call AddNewRobots
                 halt
                 jp MainLoop
 
@@ -32,11 +33,12 @@ MainLoop        call MoveRobots
                 include "Player.asm"
                 include "Bullets.asm"
                 include "Bots.asm"
+                include "Collisions.asm"
                 include "Rnd.asm"
                 include "Util.asm"
-;                include "TestClearSprite.asm"
-;                include "TestDrawSprite.asm"
-;                include "TestBitmap.asm"
+
+End             db 0
+
                 org $9000
                 include "SpriteTables.asm"
                 org $f000

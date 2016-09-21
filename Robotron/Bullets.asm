@@ -8,8 +8,8 @@ MoveBullets             ld hl, BulletBitmap
                         ld (DrawSprite_Attr), a
                         ld hl, BulletTable
 
-MB_Loop                 ld a, (NextBulletLo)
-                        cp l
+MB_Loop                 ld a, l
+                        cp TopBulletLo
                         ret z
 
                         ld c, (hl)
@@ -19,6 +19,9 @@ MB_Loop                 ld a, (NextBulletLo)
                         ld e, (hl)
                         inc l
                         ld d, (hl)
+                        ld a, c
+                        or b
+                        jr z, MB_Next
 
                         push hl
                         push hl
@@ -39,28 +42,26 @@ MB_Loop                 ld a, (NextBulletLo)
                         call DrawSprite
 
                         pop hl
-                        inc l
+MB_Next                 inc l
                         jr MB_Loop
 
 MB_RemoveBullet         pop hl
-                        ld a, (NextBulletLo)
-                        ld e, a
-                        ld d, h
-                        dec e
-                        ex de, hl
-                        ldd
-                        ldd
-                        ldd
-                        ldd
-                        ex de, hl
-                        inc hl
-                        ld a, e
-                        inc a
-                        ld (NextBulletLo), a
-
+                        call RemoveBullet
                         jr MB_Loop
 
-Fire                    ld a, b
+RemoveBullet            dec l           ; On entry HL points to the last byte in the bullet info.
+                        dec l
+                        dec l
+                        xor a
+                        ld (hl), a
+                        inc l
+                        ld (hl), a
+                        inc l
+                        inc l
+                        inc l
+                        ret             ; On exit HL points to the first byte in the next bullet info.
+
+AddBullet               ld a, b
                         add a, a
                         ld b, a
                         ld a, c
@@ -69,12 +70,20 @@ Fire                    ld a, b
                         or b
                         ret z
 
-                        ld a, (NextBulletLo)
+                        ld hl, BulletTable
+AB_Loop                 ld a, l
                         cp TopBulletLo
                         ret z
+                        ld a, (hl)
+                        inc l
+                        or (hl)
+                        jr z, AB_FoundFreeBullet
+                        inc l
+                        inc l
+                        inc l
+                        jr AB_Loop
 
-                        ld l, a
-                        ld h, BulletTableHi
+AB_FoundFreeBullet      dec l
                         ld (hl), c
                         inc l
                         ld (hl), b
@@ -82,8 +91,5 @@ Fire                    ld a, b
                         ld (hl), e
                         inc l
                         ld (hl), d
-                        inc l
-                        ld a, l
-                        ld (NextBulletLo), a
                         ret
 

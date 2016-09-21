@@ -39,7 +39,7 @@ TestKeysDone            push de
                         pop bc
                         call Move
                         ld (PlayerXY), de
-                        call Fire
+                        call AddBullet
 
 DrawPlayer              ld de, (PlayerXY)
                         ld hl, PlayerBitmap
