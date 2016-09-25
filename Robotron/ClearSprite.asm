@@ -13,15 +13,12 @@ ClearSprite             equ *
                         jr nc, CS_SetMask
                         ld hl, %1111000000000000 ; Right-image mask
 CS_SetMask              ld (CS_Mask), hl
-                        xor a
+                        ld h, $40
                         srl d
-                        jr nc, CS_SetDispPtrDelta
-                        ld a, 4
-CS_SetDispPtrDelta      ld (CS_DispPtrDelta), a
+                        jr nc, CS_CalcDispPtr
+                        ld h, $44
 
-                        ; Calculate the disp ptr.
-
-                        ld a, d
+CS_CalcDispPtr          ld a, d
                         rrca
                         rrca
                         rrca
@@ -30,9 +27,7 @@ CS_SetDispPtrDelta      ld (CS_DispPtrDelta), a
                         ld l, a
                         ld a, d
                         and %11111000
-                        add a, $40
-                        add a, 00
-CS_DispPtrDelta         equ * - 1
+                        add a, h
                         ld h, a
 
                         ; Clear the display region.
@@ -63,8 +58,7 @@ CS_Loop                 ld a, (hl)
 
                         ; Adjust the disp ptr in HL if necessary.
 
-                        ld a, h
-                        and %00000111
+                        bit 2, h
                         jp nz, CS_ClearFour
 
                         ld a, l
