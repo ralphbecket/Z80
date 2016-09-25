@@ -1,3 +1,11 @@
+# ZeusBak files and folders.
+ZeusBak/
+*.szx
+*.zip
+
+
+
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
