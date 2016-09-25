@@ -3,8 +3,7 @@ InitRobots              ld hl, BotTable
                         ld bc, TopBotLo + 2
                         ld (hl), l      ; l = $00
                         ldir
-                        ld a, InitNewBotTimerReset
-                        ld hl, InitNewBotTimerReset * $0101
+                        ld hl, InitBotsPerWave * $100 + NewBotTimerReset
                         ld (NewBotTimer), hl
                         ret
 
@@ -88,11 +87,18 @@ AddNewRobots            ld hl, (NewBotTimer)
                         dec l
                         ld (NewBotTimer), hl
                         ret nz
-                        dec h
-                        ld l, h
+                        inc h                   ; Inc. bots per wave.
+                        ld l, NewBotTimerReset
                         ld (NewBotTimer), hl
 
-AR_NewRobot             call Rnd
+                        ld b, h
+AN_Loop                 push bc
+                        call AddNewRobot
+                        pop bc
+                        djnz AN_Loop
+                        ret
+
+AddNewRobot             call Rnd
                         rrca
                         jr c, AR_TopOrBot
 AR_LeftOrRight          rrca
@@ -133,4 +139,11 @@ AR_FoundFreeBot         ld (hl), BotTimerReset
                         ld (hl), d
                         ret
 
-
+; On entry, HL points to last byte of bot info.
+RemoveRobot             ld d, (hl)
+                        dec l
+                        ld e, (hl)
+                        dec l
+                        ld (hl), 0
+                        call ClearSprite
+                        ret

@@ -24,7 +24,6 @@ CC_BulletLoop           ld a, l
                         cp TopBulletLo
                         jr z, CC_BulletLoopDone
 
-                        ex de, hl
                         ld a, (hl)
                         inc l
                         or (hl)
@@ -53,10 +52,32 @@ CC_FoundLiveBullet      inc l
 
 CC_FoundCollision       dec l
                         call RemoveBullet
-                        pop hl                   ; XXX HL points to next bot now.  Fix this!
-                        ;call RemoveRobot
+                        pop hl
+                        push hl
+                        dec l
+                        call RemoveRobot
+                        ; XXX Increment score.
+                        pop hl
                         jr CC_BotLoop
 
-CC_BulletLoopDone       pop hl
+CC_BulletLoopDone       ld de, (PlayerXY)
+                        ld a, c
+                        sub a, e
+                        add a, 2
+                        cp 5
+                        jr nc, CC_NoPlayerHit
+                        ld a, b
+                        sub a, d
+                        add a, 2
+                        cp 5
+                        jr nc, CC_NoPlayerHit
+
+CC_PlayerHit            ld bc, PortQWERT
+                        in a, (c)
+                        and KeyRMask
+                        jp z, Main
+                        jr CC_PlayerHit
+
+CC_NoPlayerHit          pop hl
                         jr CC_BotLoop
 
