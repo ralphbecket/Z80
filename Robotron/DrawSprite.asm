@@ -100,8 +100,7 @@ DS_Loop                 ld a, (de)
 
                         ; Adjust the disp ptr in HL if necessary.
 
-                        ld a, h
-                        and %00000111
+                        bit 2, h
                         jp nz, DS_DrawFour
 
                         ld a, l

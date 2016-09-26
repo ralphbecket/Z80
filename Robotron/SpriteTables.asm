@@ -1,9 +1,14 @@
-; These tables must be aligned on 256 byte boundaries.
+; These tables must fit within 256 byte page boundaries.
+
+StartOfTables           equ *
+
 PlayerTable             ds 256
 BulletTable             ds 256
 BotTable                ds 256
-HumanTable              ds 256
-HulkTable               ds 256
+ScoreDigits             ds NumScoreDigits
+
+;HumanTable              ds 256
+;HulkTable               ds 256
 
 PlayerTimer             equ PlayerTable + 0
 PlayerTimerReset        equ 2 ; Player moves every 2nd frame.
@@ -12,7 +17,6 @@ PlayerAttr              equ Bright + WhiteInk
 
 ; Bullet info's are dx, dy, x, y.  A free bullet slot has dx = dy = 0.
 BulletTableHi           equ BulletTable / 256
-NextBulletLo            ds 1
 MaxBullets              equ 4
 TopBulletLo             equ 4 * MaxBullets
 BulletAttr              equ Bright + CyanInk
@@ -28,5 +32,11 @@ BotsPerWave             ds 1
 InitBotsPerWave         equ 5
 NewBotTimerReset        equ 51 ; Coprime with BotTimerReset.
 
+; Scoring.
+NumScoreDigits          equ 6
+ScoreDigitsHi           equ ScoreDigits / 256
+
 ; XXX Add remaining table structures.
 
+EndOfTables             equ *
+SizeOfTables            equ EndOfTables - StartOfTables

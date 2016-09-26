@@ -76,3 +76,18 @@ BotBitmap               dg ...xxxxxx.......
                         dg .....xxxx..xxxx.
                         dg .....xxxx..xxxx.
 
+; Score digits are 2x4 pixels.
+
+Digit0                  dg ...x..x.
+Digit1                  dg .x.x.x.x
+Digit2                  dg xx.xx.xx
+Digit3                  dg xx.x.xxx
+Digit4                  dg x.x.xx.x
+Digit5                  dg xxx..xxx
+Digit6                  dg xxx.xxxx
+Digit7                  dg xx.x.x.x
+Digit8                  dg xx..xxxx
+Digit9                  dg xxxx.xxx
+DigitBotLo              equ Digit0 & $ff
+DigitTopLo              equ * & $ff
+DigitBotHi              equ Digit0 / 256

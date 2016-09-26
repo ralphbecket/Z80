@@ -1,11 +1,6 @@
 ; This is the XABC algorithm.
 ; I use the alternate register set for speed.
-
-InitRnd                 exx
-                        ld bc, $017b
-                        ld de, $452a
-                        exx
-                        ret
+; Prime with InitRnd.asm.
 
 Rnd                     exx
                         inc b           ; b = b + 1

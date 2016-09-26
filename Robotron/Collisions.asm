@@ -22,7 +22,7 @@ CC_FoundLiveBot         inc l
                         ld hl, BulletTable
 CC_BulletLoop           ld a, l
                         cp TopBulletLo
-                        jr z, CC_BulletLoopDone
+                        jr z, CC_CheckPlayer
 
                         ld a, (hl)
                         inc l
@@ -39,15 +39,7 @@ CC_FoundLiveBullet      inc l
                         inc l
                         ld d, (hl)
                         inc l
-                        ld a, c
-                        sub a, e
-                        add a, 2
-                        cp 5
-                        jr nc, CC_BulletLoop
-                        ld a, b
-                        sub a, d
-                        add a, 2
-                        cp 5
+                        call CheckCollision
                         jr nc, CC_BulletLoop
 
 CC_FoundCollision       dec l
@@ -56,20 +48,14 @@ CC_FoundCollision       dec l
                         push hl
                         dec l
                         call RemoveRobot
-                        ; XXX Increment score.
+
+                        call IncScore
+
                         pop hl
                         jr CC_BotLoop
 
-CC_BulletLoopDone       ld de, (PlayerXY)
-                        ld a, c
-                        sub a, e
-                        add a, 2
-                        cp 5
-                        jr nc, CC_NoPlayerHit
-                        ld a, b
-                        sub a, d
-                        add a, 2
-                        cp 5
+CC_CheckPlayer          ld de, (PlayerXY)
+                        call CheckCollision
                         jr nc, CC_NoPlayerHit
 
 CC_PlayerHit            ld bc, PortQWERT
@@ -81,3 +67,16 @@ CC_PlayerHit            ld bc, PortQWERT
 CC_NoPlayerHit          pop hl
                         jr CC_BotLoop
 
+; Compare BC as yx against DE as y'x' for
+; |y - y'| <= 2 && |x - x'| <= 2.
+; Returns with carry set iff this is true.
+CheckCollision          ld a, c
+                        sub a, e
+                        add a, 2
+                        cp 5
+                        ret nc
+                        ld a, b
+                        sub a, d
+                        add a, 2
+                        cp 5
+                        ret

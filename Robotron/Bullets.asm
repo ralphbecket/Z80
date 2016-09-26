@@ -1,7 +1,3 @@
-InitBullets             ld a, 0
-                        ld (NextBulletLo), a
-                        ret
-
 MoveBullets             ld hl, BulletBitmap
                         ld (DrawSprite_BitmapPtr), hl
                         ld a, BulletAttr

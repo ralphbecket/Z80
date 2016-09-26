@@ -10,4 +10,4 @@ ClearScreen             ld hl, $4000
                         ld bc, $02ff
                         ld (hl), a
                         ldir
-                        ret
+
