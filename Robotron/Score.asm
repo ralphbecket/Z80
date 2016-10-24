@@ -34,14 +34,14 @@ DSD_CalcAttrPtr         ld a, b
                         ld b, 4
                         ld de, 32 - 1
 
-DSD_Loop                xor a
+DSD_Loop                ld a, YellowInk
                         sla c
                         jr nc, DSD_WriteLeftPx
                         ld a, YellowPaper
 DSD_WriteLeftPx         ld (hl), a
                         inc l
 
-                        xor a
+                        ld a, YellowInk
                         sla c
                         jr nc, DSD_WriteRightPx
                         ld a, YellowPaper

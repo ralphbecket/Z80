@@ -9,6 +9,7 @@ usePropChars    equ true
 noScroll        equ false ;true
 
 Start           call Cls
+                di
 ;                ld hl, testProg55: call runTest
                 ld hl, testProg0: call runTest
                 ld hl, testProg1: call runTest
@@ -75,6 +76,7 @@ Start           call Cls
                 ld hl, testProg62: call runTest
 
                 halt ; test complete!
+                jr * - 1
 
 runTest         ld (NextChPtr), hl
                 call PutStrNL
@@ -153,6 +155,8 @@ testProg60      db "x = 10 y = x / -2", 0
 testProg61      db "x = -10 y = x / -2", 0
 testProg62      db "x = 0 gosub l1 gosub l1 return :l1 x = x + 1 return", 0
 
+CodeStart       equ *
+
                 include "Prog.asm"
                 include "Expr.asm"
                 include "Gen.asm"
@@ -162,5 +166,12 @@ testProg62      db "x = 0 gosub l1 gosub l1 return :l1 x = x + 1 return", 0
                 include "Runtime.asm"
                 include "Vars.asm"
                 include "Consts.asm"
+
+CodeEnd         equ *
+
+                zeusprint CodeEnd - CodeStart, " bytes"
+
+                ; Printing isn't really part of the compiler.
+
                 include "Puts.asm"
 

@@ -39,4 +39,10 @@ AllLeft                 equ $8400 - AllEnd
                         org $9000
                         include "SpriteTables.asm"
 
+                        ; Generate a SZX file
+                        output_szx "Robotron.szx",$0000,Main    ; The szx file
+
+                        ; Now, also generate a tzx file using the loader
+                        output_tzx "Robotron.tzx","Robotron","",Main,AllEnd - Main,1,Main ; A tzx file using the loader
+
 

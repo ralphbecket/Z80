@@ -1,5 +1,4 @@
 Init                    xor a
-
                         include "ClearScreen.asm"
                         include "ClearTables.asm"
                         include "InitPlayer.asm"

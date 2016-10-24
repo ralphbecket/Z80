@@ -23,7 +23,7 @@ BulletAttr              equ Bright + CyanInk
 
 ; Bot info's are timer, x, y.  A free bot slot has timer = 0.
 BotTableHi              equ BotTable / 256
-MaxBots                 equ 24
+MaxBots                 equ 19
 TopBotLo                equ 3 * MaxBots
 BotTimerReset           equ 5 ; Bots move every 5th frame.
 BotAttr                 equ Bright + RedInk
