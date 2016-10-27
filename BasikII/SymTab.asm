@@ -8,6 +8,10 @@
 ; Something smarter involving hash tables could be arranged, but for
 ; now I'm going for simplicity.
 
+; Look for the symbol just scanned by the tokeniser.
+; --
+; NZ-flag on success.
+; HL: ptr to data section of symbol table entry.
 FindSym                 ld hl, (SymTabLast)
 fsLoop                  ld a, h
                         or l
@@ -46,4 +50,26 @@ fsFound                 pop de          ; Discard saved prev ptr.
 fsNext                  pop hl          ; HL = prev ptr.
                         jr fsLoop
 
+
+; Add the symbol just scanned by the tokeniser to the symbol table.
+; --
+; HL: ptr to the data section of the symbol table entry.
+;
+; Note: if data is added to the entry, the SymTabTop variable must be
+; updated to point to the first byte after the data.
+AddSym                  ld hl, (SymTabTop)
+                        ld de, (SymTabLast)
+                        ld (SymTabLast), hl
+                        ld (hl), e: inc hl: ld (hl), d: inc hl
+                        ld a, (TokLen)
+                        ld (hl), a: inc hl
+                        ld de, (TokStart)
+                        ld (hl), e: inc hl: ld (hl), d: inc hl
+                        ld (SymTabTop), hl
+                        ret
+
+
+
 fsSymDataPtr            dw 0
+SymTabTop               dw 0
+SymTabLast              dw 0

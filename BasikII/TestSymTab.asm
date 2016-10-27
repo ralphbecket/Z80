@@ -5,7 +5,9 @@ Zeus_SP                 equ $FF40
 
 
 
-TestSymTab              ld hl, tsSrc
+TestSymTab              ld hl, tsBarEntry
+                        ld (SymTabLast), hl
+                        ld hl, tsSrc
                         ld (CurrSrcPtr), hl
 
 tsNext                  call NextToken
@@ -26,8 +28,6 @@ tsMiss                  halt
 tsSrc                   db " foo + (bar + foo )", 0
 
 ; Test symbol table.
-
-SymTabLast              dw tsBarEntry
 
 tsLPar                  db "("
 tsRPar                  db ")"
