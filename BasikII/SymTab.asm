@@ -1,17 +1,21 @@
-; This is a trivially simple symbol table implementation
-; in the style of Forth.
-;
-; The symbol table is a sequence of entries of the following form:
-;
-;       [Prev entry ptr][Length][Str ptr][... Variable-length data ...]
-;
-; Something smarter involving hash tables could be arranged, but for
-; now I'm going for simplicity.
+/*****************************************************************************
+
+This is a trivially simple symbol table implementation
+in the style of Forth.
+
+The symbol table is a sequence of entries of the following form:
+
+    [Prev entry ptr][Length][Str ptr][... Variable-length data ...]
+
+Something smarter involving hashing could be arranged, but for
+now I'm going for simplicity.
+
+*****************************************************************************/
 
 ; Look for the symbol just scanned by the tokeniser.
 ; --
 ; NZ-flag on success.
-; HL: ptr to data section of symbol table entry.
+; HL: ptr to data section of symbol table entry - also in (SymDataPtr).
 FindSym                 ld hl, (SymTabLast)
 fsLoop                  ld a, h
                         or l
@@ -28,10 +32,10 @@ fsLoop                  ld a, h
                         inc hl
                         ld d, (hl)
                         inc hl
-                        ld (fsSymDataPtr), hl
+                        ld (SymDataPtr), hl
                         ld hl, (TokStart)
                         ex de, hl       ; HL = Sym string ptr, DE = Tok string ptr.
-                        ld a, (TokLen)
+                        ld a, (TokLength)
                         cp b
                         jr nz, fsNext   ; NZ-flag: length mismatch.
 
@@ -43,7 +47,7 @@ fsStrCmp                ld a, (de)
                         djnz fsStrCmp
 
 fsFound                 pop de          ; Discard saved prev ptr.
-                        ld hl, (fsSymDataPtr)
+                        ld hl, (SymDataPtr)
                         inc b           ; NZ-flag: success!  HL = Ptr to data section.
                         ret
 
@@ -61,15 +65,17 @@ AddSym                  ld hl, (SymTabTop)
                         ld de, (SymTabLast)
                         ld (SymTabLast), hl
                         ld (hl), e: inc hl: ld (hl), d: inc hl
-                        ld a, (TokLen)
+                        ld a, (TokLength)
                         ld (hl), a: inc hl
                         ld de, (TokStart)
                         ld (hl), e: inc hl: ld (hl), d: inc hl
                         ld (SymTabTop), hl
+                        ld (SymDataPtr), hl
                         ret
 
 
 
-fsSymDataPtr            dw 0
-SymTabTop               dw 0
-SymTabLast              dw 0
+SymTabTop               dw 0            ; One past the last byte in the table.
+SymTabLast              dw 0            ; Ptr to the last entry in the table.
+SymDataPtr              dw 0            ; Ptr to the data for the last found symbol.
+

@@ -6,6 +6,12 @@
 ; Code generation is largely via macros because otherwise it's
 ; too horrible to contemplate.
 
+Unless          macro (cc, code)
+                jr cc, endCode
+                code
+endCode         equ *
+                endm
+
 Gen1            macro (x1)
                 ld (ix), x1
                 inc ix
@@ -53,15 +59,27 @@ Gen2Const       macro (x1, x2, x3)
                 Gen2(high x3)
                 endm
 
-GenLdHLConst    macro (x1)
+GenLdHLConst    macro ()
+                Gen3($21, l, h)
+                endm
+
+GenLdHLLitConst macro (x1)
                 Gen1Const($21, x1)
                 endm
 
-GenLdHLVar      macro (x1)
+GenLdHLVar      macro ()
+                Gen3($2a, l, h)
+                endm
+
+GenLdHLLitVar   macro (x1)
                 Gen1Const($2a, x1)
                 endm
 
-GenStHLVar      macro (x1)
+GenStHLVar      macro ()
+                Gen3($22, l, h)
+                endm
+
+GenStHLLitVar   macro (x1)
                 Gen1Const($22, x1)
                 endm
 

@@ -1,15 +1,25 @@
-; A token is one of the following:
-; - EOF indicated by a 0 byte;
-; - a left or right parenthesis;
-; - an unsigned integer;
-; - an identifier, starting with a letter or underscore, followed by alphanumerics;
-; - an identifier comprised of non-alphanumeric characters.
-; Whitespace is simply skipped.
+/*****************************************************************************
+
+A token is one of the following:
+- EOF indicated by a 0 byte;
+- a left or right parenthesis;
+- an unsigned integer;
+- an identifier, starting with a letter or underscore, followed by
+alphanumerics;
+- an identifier comprised of non-alphanumeric characters.
+
+Whitespace is simply skipped.
+
+*****************************************************************************/
+
+TokIsEof                equ 0
+TokIsNum                equ 1
+TokIsId                 equ 2   ; This includes symbol tokens and parentheses.
 
 ; --
 ; A: (TokKind)
 ; DE: (CurrSrcPtr)
-; HL: (TokValue) if A = TokNum, (TokLen) if A = TokId.
+; HL: (TokValue) if A = TokNum, (TokLength) if A = TokId.
 NextToken               ld de, (CurrSrcPtr)
 
 ntSkipSpace             ld a, (de)
@@ -46,7 +56,7 @@ ntIdEnd                 ld (CurrSrcPtr), de
                         ld hl, (TokStart)
                         ex de, hl
                         sbc hl, de
-                        ld (TokLen), hl
+                        ld (TokLength), hl
                         ld a, TokIsId
                         ld (TokKind), a
                         ret
@@ -95,14 +105,10 @@ ntNumEnd                ld (CurrSrcPtr), de
                         ld (TokKind), a
                         ret
 
-TokIsEof                equ 0
-TokIsNum                equ 1
-TokIsId                 equ 2   ; This includes symbol tokens and parentheses.
-
 CurrSrcPtr              dw 0    ; Pointer to current char in source code.
 ; Data regarding token just read.
 TokStart                dw 0    ; Ptr to first char in id token.
-TokLen                  dw 0    ; Token length.
+TokLength               dw 0    ; Token length.
 TokValue                dw 0    ; Value of num token.
 TokKind                 db 0
 
