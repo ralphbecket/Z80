@@ -10,181 +10,162 @@
 ;
 ;       Expr ::= Prefix* Value Postfix* [Infix Expr]
 ;
-;
 
-; Symbol kinds.
-SymIsPrefix             equ 0
-SymIsValue              equ 3
-SymIsPostfix            equ 6
-SymIsInfix              equ 9
-SymIsSpecial            equ 12
+DoNextSym               call NextToken
+DoCurrSym               ld a, (TokKind)
 
-ProcessNextSym          call NextToken
                         cp TokIsEof
-                        jr z, pnsEof
+                        jp z, DoEof
+
                         cp TokIsNum
-                        jr z, pnsNum
+                        jp z, DoNum
+
                         call FindSym
-                        jr nz, pnsSym
+                        jp nz, DoSymCode
 
-pnsNewSym               halt                    ; XXX Fill this in!
+DoNewSym                halt                    ; XXX Fill this in!
 
-pnsEof                  halt                    ; XXX Fill this in!
+DoEof                   halt                    ; XXX Fill this in!
 
-pnsNum                  ld a, SymIsValue
-                        ld (SymKind), a
-                        jr ProcessSym
+DoSymCode               jp (hl)
 
-pnsSym                  ld a, (hl)              ; Every symbol table entry starts with
-                        inc hl                  ; the symbol's kind (one byte) and
-                        ld (SymKind), a         ; the symbol's code ptr (two bytes).
-                        ld (SymDataPtr), hl
+; ---- Prefix ops. ----
 
-ProcessSym              ld a, (SymKind)         ; Jump to (State) + (SymKind).
-                        ld e, a
-                        ld d, 0
-                        ld hl, (State)
-                        add hl, de
-                        jp (hl)
+; HL: prefix op generator code ptr.
+; --
+DoPrefixOp              ld a, (State)
+                        cp AtValue
+                        jp z, DoCloseExpr
+                        cp AtPrefixOp
+                        jp z, _DoPrefixOp
+                        jp Error
 
-; This macro fetches the data pointed to by the SymDataPtr.
+_DoPrefixOp             push hl                 ; Push code generator.
+                        jp DoNextSym
 
-LdHLSymData             macro ()
-                        ld hl, (SymDataPtr)
-                        ld a, (hl)
-                        inc hl
-                        ld h, (hl)
-                        ld l, a
-                        endm
+GoToAtValue             ld a, AtValue
+                        ld (State), a
+                        jp DoNextSym
 
-; ---- Prefix operators. ----
-;
-; The code generator addresses of prefix operators are pushed
-; on to the stack.  The bottom "operator" is a pseudo-op which
-; simply moves the expression parser state to AtValue.
-;
-; Prefix operator code generators must end with EndPrefixOp().
+; ---- Constants ----
 
-GoToAtPrefix            ld hl, EndPrefixGen
-                        push hl
-                        ld hl, AtPrefix
-                        ld (State), hl
-                        jr ProcessNextSym
+DoNum                   ld a, (State)
+                        cp AtValue
+                        jp z, DoCloseExpr
+                        cp AtPrefixOp
+                        jp z, _DoNum
+                        jp Error
 
-EndPrefixGen            equ GoToAtValue
-
-AddPrefixOp             LdHLSymData()           ; We must be AtPrefix here.
-                        push hl                 ; Prefix op generators must
-                        jr ProcessNextSym       ; end with EndPrefixOp().
-
-GoToAtValue             ld hl, AtValue
-                        ld (State), hl
-                        jr ProcessNextSym
-
-EndPrefixOp             macro ()
-                        ret
-                        endm
-
-; ---- Values. ----
-;
-; Values are constants and variables.  Function calls
-; are handled by 'special' code which is executed
-; immediately.  Function call generators must end with
-; EndValue().
-
-GenValue                ld a, (TokKind)
-                        cp TokIsNum
-                        jr nz, GenVar
-
-GenConst                ld hl, (TokValue)
+_DoNum                  ld hl, (TokValue)
                         GenLdHLConst()
-                        EndValue()
+                        ret                     ; Now compile prefix ops.
 
-GenVar                  LdHLSymData()
-                        GenLdHLVar()
-                        EndValue()
+; ---- Variables ----
 
-EndValue                macro ()
-                        ret                     ; Start compiling prefix ops.
-                        endm
+; ---- Postfix ops. ----
 
-; ---- Postfix operators. ----
-;
-; Postfix operators are invoked directly as special cases.
-;
-; Postfix operator code generators must end with EndPostfixOp().
+DoPostfixOp             ld a, (State)
+                        cp AtValue
+                        jp z, _DoPostfixOp
+                        jp Error
 
-GenPostfixOp            equ RunSpecialCaseCode
-
-EndPostfixOp            macro ()
-                        jp ProcessNextSym
-                        endm
-
-; ---- Infix operators. ----
-;
-; Infix operators are stacked, code generator address first, then
-; precedence number.  Higher precedence means tighter binding.
-; Equal precedence means "associate to the left" (i.e., there are no
-; right-associative operators).
-;
-; Infix operators must end with EndInfixOp().
-
-EndInfixOp              macro ()
-                        jp AddInfixOp
-                        endm
-
-AddInfixOp              ld a, (NewOpPrecedence)
-                        pop bc                  ; C is prev. op. precedence.
-                        cp c
-                        ret z
-                        ret c                   ; Compile prev. op. if new precedence is not higher.
-                        push bc                 ; Restore prev. op. precedence.
-                        ld c, a
-                        ld hl, (NewOpCodeGenPtr)
-                        push hl
-                        push bc                 ; Push new op code gen ptr. and precedence.
-                        ld hl, AtInfix
-                        ld (State), hl
-                        jp ProcessNextSym
-
-; ---- Special-case code. ----
-;
-; Special cases are executed directly and are expected to do their
-; own error checking, generation, and state transitions.
-
-RunSpecialCaseCode      LdHLSymData()
+_DoPostfixOp            ld de, DoNextSym
+                        push de
                         jp (hl)
 
-; ---- Error states. ----
+; ---- Infix ops. ----
 
-UnexpectedPostfixOp     halt
+; HL: infix op code generator ptr.
+; A: operator precedence (higher binds more tightly).
+; --
+DoInfixOp               ld (InfixOpCodePtr), hl
+                        ld (InfixOpPrec), a
+                        ld a, (State)
+                        cp AtValue
+                        jp z, _DoInfixOp
+                        jp Error
 
-UnexpectedInfixOp       halt
+_DoInfixOp              ld a, (InfixOpPrec)
+                        ld b, a                 ; B: curr infix op prec.
+                        pop af                  ; A: prev infix op prec.
+                        cp b
+                        jp c, dioPushInfixOp
 
-; ---- State transition jump tables. ----
+dioGenPrevInfixOp       ld hl, _DoInfixOp
+                        ex (sp), hl             ; HL: prev infix code gen ptr.
+                        jp (hl)
 
-AtPrefix                jp AddPrefixOp
-                        jp GenValue
-                        jp UnexpectedPostfixOp
-                        jp UnexpectedInfixOp
-                        jp RunSpecialCaseCode
+dioPushInfixOp          push af                 ; Prev infix op prec.
+                        ld hl, (InfixOpCodePtr)
+                        push hl                 ; Curr infix code gen ptr.
+                        push bc                 ; Curr infix op prec.
 
-AtValue                 jp atvalCloseExpr       ; This prefix op can't be part of this expr.
-                        jp atvalCloseExpr       ; This value can't be part of this expr.
-                        jp GenPostfixOp
-                        jp AddInfixOp
-                        jp RunSpecialCaseCode
+GoToAtPrefixOp          ld hl, GoToAtValue
+                        push hl
+                        ld a, AtPrefixOp
+                        ld (State), a
+                        jp DoNextSym
 
-AtPostfix               equ AtValue             ; This has the same transition table.
+; ---- Parentheses. ----
 
-AtInfix                 jp atinfAddPrefixOp
-                        jp atinfGenValue
-                        jp UnexpectedPostfixOp
-                        jp UnexpectedInfixOp
-                        jp RunSpecialCaseCode
+; LPar is treated as an infix operator with the second-lowest precedence.
+; RPar is treated as an infix operator with the lowest precedence.
+; An LPar cancels the matching RPar.
 
-State                   dw AtPrefix             ; The current compiler state.
-SymKind                 db 0
-NewOpPrecedence         db 0
-NewOpCodeGenPtr         dw 0
+DoLPar                  ld a, (State)
+                        cp AtPrefixOp
+                        jp z, _DoLPar
+                        jp DoCloseExpr          ; This isn't part of this expr.
+
+_DoLPar                 ld hl, MatchRPar
+                        push hl
+                        ld a, LParPrec          ; This is the second-lowest precedence.
+                        push af
+                        jp DoNextSym
+
+MatchRPar               ld a, (State)
+                        cp AtRPar
+                        jp nz, Error
+                        ld a, AtValue
+                        ld (State), a
+                        ret                     ; Generate any stacked prefix operators.
+
+DoRPar                  ld a, (State)
+                        cp AtValue
+                        jp z, _DoRPar
+                        cp AtPrefixOp
+                        jp z, Error
+                        jp DoCloseExpr
+
+_DoRPar                 ld a, AtRPar
+                        ld (State), a
+                        ld a, RParPrec          ; This is the lowest precedence.
+                        ld (InfixOpPrec), a
+                        jp _DoInfixOp           ; Generate any stacked infix operators.
+
+; ---- Closing the expr. ----
+
+DoCloseExpr             ld a, CloseExprPrec
+                        ld (InfixOpPrec), a
+                        jp _DoInfixOp           ; Generate any stacked infix operators.
+
+; ---- Error reporting. ----
+
+Error                   halt                    ; XXX Fill this in!
+
+; ---- Compiler states. ----
+
+AtPrefixOp              equ 1
+AtValue                 equ 2
+AtRPar                  equ 3
+AtExprEnd               equ 4
+
+CloseExprPrec           equ 0
+RParPrec                equ 1
+LParPrec                equ 2
+
+State                   db 0
+
+InfixOpPrec             db 0
+InfixOpCodePtr          dw 0
 
