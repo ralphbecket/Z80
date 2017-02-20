@@ -46,8 +46,8 @@ for 8 * (7 + 7 + 4 + 4) - (4 + 4) + 13 = 181 T-states per drawn cell.
 
 The 4,596 T-state head-start allows us to draw 25 cells.
 
-Each row of cells takes 8 * 224 = 1,792 T-states to draw, or just less
-than the time it takes to draw 10 cells.  
+Each row of cells takes 8 * 224 = 1,792 T-states for the scan beam to 
+cover, or just less than the time it takes to draw 10 cells.  
 
 This means that provided the mean number of cells on each row, scanning
 row by row from top to bottom, never exceeds ten, then we will not be caught
@@ -58,3 +58,30 @@ tilt -- not too shabby.
 Of course, this requires that we sort our bitmap drawing data by rows, but
 we can do that in the alternate frames where we do not update the display.
 
+BRAINWAVE!
+
+The attribute copy can be made shorter and faster using stack tricks.
+For example, copying 8 bytes like this
+
+    ld SP, [src]
+    pop AF, BC, DE, HL
+    ld SP, [tgt + 8]
+    push HL, DE, BC, AF
+
+takes just 104 T-states and two fewer bytes than the 'ldi' scheme.  This
+would cost 104 * 3 * 24 = 7,488 T-states, a saving of 2252 T-states or
+enough for an extra 12.5 cells.  This would give us a head start of 37.5
+cells
+
+If it takes 181 T-states to draw a cell, and 7,488 T-states to copy the
+attributes, then maximum occupancy of m-cells per row is given by
+
+    7,488 + 24 * m * 181 = 14,336 + 24 * 1,792
+
+or m = 11.5 cells per row.  That is very close to 50% occupancy in a 24x24
+cell playing field!
+
+DEMO
+
+A Pac Man maze, scaled up to take 3x3 cell sprites, has 15% occupancy,
+leaving plenty of capacity left over to handle the sprites.
