@@ -68,57 +68,6 @@ PlotCell                call PlotAttr
                         ld (hl), d
                         ret
 
-PrepareDrawList         ld hl, ShadowAttrMap
-                        ld de, DrawList
-                        ld ixh, 0                 ; Draw list count.
-                        ld bc, -$600
-                        ld ixl, 24                ; Row loop counter.
-pdlLoop         loop 32
-                        bit FlashBitNo, (hl)
-                        call z, pdlAddDrawCell
-                        inc l
-                lend
-                        dec l
-                        inc hl
-                        ;ld a, 8
-                        ;add a, l
-                        ;ld l, a
-                        ;adc a, h
-                        ;sub l
-                        ;ld h, a
-                        dec ixl
-                        jp nz, pdlLoop
-                        ld a, ixh
-                        ld (NumCellsToDraw), a
-                        ret
-
-pdlAddDrawCell          inc ixh
-                        ld a, l
-                        ld (de), a
-                        inc de
-                        ld a, h
-                        sub a, high(ShadowAttrMap)
-                        add a, a
-                        add a, a
-                        add a, a
-                        add a, high(DisplayMap)
-                        ld (de), a
-                        inc de
-                        inc h
-                        inc h
-                        inc h
-                        ld a, (hl)
-                        ld (de), a
-                        inc de
-                        inc h
-                        inc h
-                        inc h
-                        ld a, (hl)
-                        ld (de), a
-                        inc de
-                        add hl, bc
-                        ret
-
 ; Plot a row of attributes, clipping to the screen boundaries.
 ; In:   h is row, l is left column, b is width, c is attr.
 ;
@@ -175,6 +124,63 @@ cacNext                 djnz cacLoop
 ;
 ClipSprite              ; XXX HERE!
 
+; ---- Preparing the draw list. ----
+; Only use this function if you are using the PlotCell functions
+; out of order.  This function is expensive and it's better, if
+; possible, to arrange the draw list manually by plotting things
+; in the correct order in the first place.
+
+PrepareDrawList         ld hl, ShadowAttrMap
+                        ld de, DrawList
+                        ld ixh, 0                 ; Draw list count.
+                        ld bc, -$600
+                        ld ixl, 24                ; Row loop counter.
+pdlLoop         loop 32
+                        bit FlashBitNo, (hl)
+                        call z, pdlAddDrawCell
+                        inc l
+                lend
+                        dec l
+                        inc hl
+                        ;ld a, 8
+                        ;add a, l
+                        ;ld l, a
+                        ;adc a, h
+                        ;sub l
+                        ;ld h, a
+                        dec ixl
+                        jp nz, pdlLoop
+                        ld a, ixh
+                        ld (NumCellsToDraw), a
+                        ret
+
+pdlAddDrawCell          inc ixh
+                        ld a, l
+                        ld (de), a
+                        inc de
+                        ld a, h
+                        sub a, high(ShadowAttrMap)
+                        add a, a
+                        add a, a
+                        add a, a
+                        add a, high(DisplayMap)
+                        ld (de), a
+                        inc de
+                        inc h
+                        inc h
+                        inc h
+                        ld a, (hl)
+                        ld (de), a
+                        inc de
+                        inc h
+                        inc h
+                        inc h
+                        ld a, (hl)
+                        ld (de), a
+                        inc de
+                        add hl, bc
+                        ret
+
                         ; ---- Drawing ----
 
 RedrawDisplay           call DrawAttrs
@@ -215,7 +221,7 @@ dasLoop                 ld c, 32
                         ret
 
 DrawCells               ld (SavedSP), sp
-                        ld sp, DrawList
+                        ld sp, (DrawListBot)
                         ld a, (NumCellsToDraw)
                         and a
                         jp z, dcsExit
@@ -234,26 +240,29 @@ dcsDrawCell             ld a, (de)
  ;halt
                         djnz dcsLoop
 dcsExit                 ld sp, (SavedSP)
+                        xor a
+                        ld (NumCellsToDraw), a
                         ret
 
-
-                        ; ---- Storage ----
+; ---- Storage ----
 
 ; We use the following arrangement for the shadow attr map
 ; and to track and order which cells have bitmaps to be drawn.
 ; A shadow attr map cell with the flash bit set has no bitmap.
 ; Otherwise, the attr map cell at address x has a bitmap whose
 ; address is found at x + $300 and x + $400 (lo and hi bytes
-; respectively).
+; respectively) -- unless the user is plotting things in order
+; and is manually constructing the draw list.
 
 NumCellsToDraw          dw 0
 SavedSP                 dw 0
 SavedAttr               dw 0
+DrawListBot             dw DrawList
 
-                        org $ee00
+                        org $ed00
 ShadowAttrMap           ds AttrMapSize
 CellBitmapsLo           ds AttrMapSize
 CellBitmapsHi           ds AttrMapSize
 DrawList                ds 24 * 24 * 4
-Fin                     db 0
+DrawListTop             equ *
 

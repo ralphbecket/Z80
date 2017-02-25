@@ -1,5 +1,8 @@
 ; This is taken from the classic PacMan maze.
 
+; Since we plot the maze in order, we can avoid the expensive
+; sorting mechanism required when using the
+
 MoveMazeViewLeft        ld a, (MazeViewCol)
                         and a
                         ret z
@@ -32,23 +35,22 @@ PlotMaze                ld a, (MazeViewRow)     ; Each maze row is 64 bytes.
                         rrca
                         rrca
                         ld b, a
-                        and %11111100
+                        and %11000000
                         ld c, a
-                        ld a, b
-                        and %00000011
-                        ld b, a
                         ld a, (MazeViewCol)
                         add a, c
                         ld c, a
-                        adc a, b
-                        sub a, c
+                        ld a, b
+                        and %00111111
                         ld b, a
-                        ld hl, Maze
+                        ld hl, Maze + (23 * MazeWidth) + 31
                         add hl, bc              ; HL is addr of view offset into maze.
 
-                        ld de, ShadowAttrMap
+                        ld de, ShadowAttrMap + (23 * 32) + 31
                         ld ixh, 24              ; Row counter.
                         ld ixl, 32              ; Col counter.
+                        ld (SavedSP), sp
+                        ld sp, DrawListTop
 
 pmLoop                  ld a, (hl)              ; Obviously, this could be faster!
                         cp ' '
@@ -131,42 +133,46 @@ pmCageNW                ld a, MagentaInk
                         jr pmPlotCell
 
 pmPlotCell              ld (de), a
-                        push de
-                        inc d
-                        inc d
-                        inc d
-                        ld a, c
-                        ld (de), a
-                        inc d
-                        inc d
-                        inc d
-                        ld a, b
-                        ld (de), a
-                        pop de
+                        ; Store the bitmap pointer in the draw list.
+                        push bc
+                        ; Now calculate the display address and store it in the draw list.
+                        ld c, e
+                        ld a, d
+                        sub a, high(ShadowAttrMap)
+                        add a, a
+                        add a, a
+                        add a, a
+                        or high(DisplayMap)
+                        ld b, a
+                        push bc
 
-pmNextCol               inc de
-                        inc hl
+                        ; Ugh, this is ugly, but I don't want to use IY.
+                        ld a, (NumCellsToDraw)
+                        inc a
+                        ld (NumCellsToDraw), a
+
+pmNextCol               dec de
+                        dec hl
                         dec ixl
                         jp nz, pmLoop
                         ld ixl, 32
 
-pmNextRow               ld bc, 64 - 32
-                        add hl, bc
-                        ;ex de, hl
-                        ;ld bc, 32 - 24
-                        ;add hl, bc
-                        ;ex de, hl
+pmNextRow               ld bc, MazeWidth - 32
+                        or a
+                        sbc hl, bc
                         dec ixh
                         jp nz, pmLoop
 
+                        ld (DrawListBot), sp
+                        ld sp, (SavedSP)
                         ret
 
 MazeWidth               equ 64
 MazeHeight              equ 57
-MazeViewRow             db 0
+MazeViewRow             db 16
 MazeViewCol             db 0
 MazeViewRowTop          equ MazeHeight - 23
-MazeViewColTop          equ MazeWidth - 23 - 9
+MazeViewColTop          equ MazeWidth - 31 - 9
 Maze                    equ *
     db "1#########################2 1#########################2         "
     db "#                         # #                         #         "

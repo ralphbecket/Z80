@@ -85,3 +85,13 @@ DEMO
 
 A Pac Man maze, scaled up to take 3x3 cell sprites, has 15% occupancy,
 leaving plenty of capacity left over to handle the sprites.
+
+I observe that the "draw in any order then sort" mechanism is too slow
+to quite manage the full screen preparation and drawing in two frames.
+
+I further observe that plotting the maze already happens in sorted order.
+Therefore, we can save at least 33,000 Ts by simply building the draw
+list as we plot the maze.  Hmm.  If we plot the maze bottom-up, we can 
+use the stack to prepare the drawing list.  Now that would be quick!
+
+Let's do it...

@@ -1,6 +1,6 @@
                         zeusemulate "48k", "ula+"
 Zeus_PC                 equ Main
-Zeus_SP                 equ $FF00
+Zeus_SP                 equ $0000
                         org $8000
 
                         ; ---- Constants ----
@@ -11,14 +11,23 @@ AttrMapSize             equ $300
 
 Main                    xor a
                         out (254), a
-                        ld a, Flash + BlackInk + MagentaPaper
-                        call PlotMaze
-                        call PrepareDrawList
+mainLoop                call Keyboard
+                        bit UpKeyBitNo, d
+                        call nz, MoveMazeViewUp
+                        bit DownKeyBitNo, d
+                        call nz, MoveMazeViewDown
+                        bit LeftKeyBitNo, d
+                        call nz, MoveMazeViewLeft
+                        bit RightKeyBitNo, d
+                        call nz, MoveMazeViewRight
                 zeustimerstart 1
-                        call RedrawDisplay
+                        call PlotMaze
                 zeustimerstop 1
                         halt
-                        halt
+                zeustimerstart 2
+                        call RedrawDisplay
+                zeustimerstop 2
+                        jr mainLoop
                         di
                         halt
 
