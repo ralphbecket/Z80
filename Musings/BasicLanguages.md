@@ -2,6 +2,21 @@
 
 These are some musings on the topic of how to implement Basic-like languages on the Z80, specifically the ZX Spectrum.  Sinclair Basic was comfortable enough to program in, but ran like a concrete rabbit.  BBC Basic, on the other hand, was much quicker.  My career took a decade long detour into programming language design and implementation, so I understand now why the Spectrum Basic implementation was so slow.  What I don't really understand was why Basic implementers didn't go straight to compilation or, at the very least, some half-decent P-code style scheme.  But they didn't.  I'd like to point out here that the Z80 is an interesting compilation target in that it is seemingly designed to thwart any attempt at efficient language implementation.  But my first computers were a ZX-81 and a ZX Spectrum and those things ran on Z80s and that's what I learned.  Here are my thoughts on the matter.
 
+## The Z80
+
+Ahhh, the Z80.  No two registers seem to do the same things.  It suffices to say this about the Z80:
+* `SP` - 16-bit stack pointer, grows downwards, can push/pop any single 16-bit register pair;
+* `HL` - 16-bit accumulator, general workhorse;
+* `DE` - 16-bit register, plays slightly better with `HL` than other registers;
+* `BC` - 16-bit register, fairly limited;
+* `IX` and `IY` - 16-bit registers with fixed 8-bit offset indexed addressing modes, very slow;
+* `A` - 8-bit accumulator;
+* Indirect register loads and stores must go via `HL` and can only manage 8-bits at a time (e.g., to store `DE` one must do `ld (HL), E : inc HL : ld (HL), D : inc HL`, where `:` is the Z80 assembly language instruction separator);
+* There is a "shadow" bank of registers for the main set, `HL`, `DE`, `BC`, but you have to swap the entire set;
+* It's a little-endian architecture.
+
+I'll be comparing instruction sequences in terms of the number of "T-states" (i.e., clock ticks) it takes the Z80 to carry them out.
+
 ## A digression regarding Forth
 
 Horrible language, never liked it, with the sole redeeming feature of being somewhat quicker than the Basic interpreters of the day.  I will return to this at some point.  That said, the Forth philosophy of reaching for simplicity is worth emulating.
@@ -22,7 +37,7 @@ I'm going to posit a Basic-like language with the following kinds of structures:
 
 * Optionally `goto` and `gosub` and `:labels`, but these are neither here nor there.
 
-* Built-in statements, such as `print 
+* Built-in statements, such as `print e1, ...`
 
 The syntax doesn't matter too much, although we'd obviously prefer to keep it Basic-like and LL(1) for ease of parsing (i.e., we require at most one token of look-ahead to decide what to do next).
 
@@ -44,3 +59,28 @@ ADD
 MUL
 ```
 where `VAR x` pushes the value in variable `x`, `LIT 1` pushes the literal constant 1, `NEG` replaces the top-of-stack with its negation, and `ADD` and `MUL` replace the top two stack items with their sum and product respectively.
+
+An assignment `x = e` might have the simpler form
+```
+LVAR x
+[[e]]
+ASSIGN
+```
+where `LVAR x` pushes the address of variable `x`, `[[e]]` denotes the simpler form of expression `e`, and `ASSIGN` pops the value and variable address and writes the former to the latter.
+
+I claim that the speed of our language will be dictated by how efficiently expressions are evaluated, since that is what programs will spend most of their time doing.
+
+## Core VM Instructions
+
+To ground the argument, I'm going to restrict discussion to the following VM "instructions":
+
+* `NEXT` fetches and executes the next instruction;
+* `VAR x` pushes the contents of variable `x`;
+* `LIT k` pushes the literal value `k`;
+* `OP` stands for the application of any built-in operator.
+
+Later on I intend to introduce `CALL` and `RET` instructions when exploring how user-defined functions might be supported.
+
+## Interpreting tokens or Token Threaded Code
+
+TTC is a Forth-ism where each simple-form instruction must be examined to decide how it should be handled.  In this case, we might reasonably assume there are only a modest number of such which could be handled via a jump table.  In this case we might choose 
