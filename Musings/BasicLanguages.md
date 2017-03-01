@@ -13,7 +13,7 @@ Ahhh, the Z80.  No two registers seem to do the same things.  It suffices to say
 * `A` - 8-bit accumulator;
 * Indirect register loads and stores must go via `HL` and can only manage 8-bits at a time (e.g., to store `DE` one must do `ld (HL), E : inc HL : ld (HL), D : inc HL`, where `:` is the Z80 assembly language instruction separator);
 * There is a "shadow" bank of registers for the main set, `HL`, `DE`, `BC`, but you have to swap the entire set;
-* It's a little-endian architecture.
+* It's a little-endian architecture (i.e., least significant byte goes in the lower address).
 
 I'll be comparing instruction sequences in terms of the number of "T-states" (i.e., clock ticks) it takes the Z80 to carry them out.
 
@@ -77,10 +77,62 @@ To ground the argument, I'm going to restrict discussion to the following VM "in
 * `NEXT` fetches and executes the next instruction;
 * `VAR x` pushes the contents of variable `x`;
 * `LIT k` pushes the literal value `k`;
-* `OP` stands for the application of any built-in operator.
+* `OP1` stands for the application of any built-in arity 1 operator;
+* `OP2` stands for the application of any built-in arity 2 operator.
 
 Later on I intend to introduce `CALL` and `RET` instructions when exploring how user-defined functions might be supported.
 
+## Keeping the Top-of-Stack in a Register
+
+A common optimisation in Forth implementations is to keep the topmost stack item in a register rather than in memory.  I'm going to assume that optimisation is in play for the purposes of this discussion.
+
 ## Interpreting tokens or Token Threaded Code
 
-TTC is a Forth-ism where each simple-form instruction must be examined to decide how it should be handled.  In this case, we might reasonably assume there are only a modest number of such which could be handled via a jump table.  In this case we might choose 
+TTC is a Forth-ism where each simple-form instruction must be examined to decide how it should be handled.  In this case, we might reasonably assume there are only a modest number of such which could be nicely handled with a jump table.  Let's assume the jump table all sits in the same 256-byte aligned "page" of memory, that tokens are just the low-byte of the corresponding jump-table addresses, and, reasonably, that we want to use a faster, non-indexed register pair as our "instruction pointer", which I'll abbreviate as IP.  This looks about the best one could do:
+```
+NEXT:
+  ld A, (HL)    ; HL is our IP, but we could use BC or DE just as well.
+  inc HL        ; Each token is a low byte of a jump table address.
+  ld IXL, A     ; IXH always holds the jump table address high byte.
+  jp (IX)       ; Jump into the jump table.
+  
+JUMP_TABLE:
+  jp INSTR_1
+  jp INSTR_2
+  ...
+  jp INSTR_N    ; Total: 39 Ts.
+```
+The time taken to reach an instruction's code is 39 Ts (T-states).  If each instruction finishes by jumping to `NEXT` (3 bytes) rather than inlining it (6 bytes) the the total `NEXT` overhead of each instruction is 49 Ts.  For the sake of argument, we'll assume `NEXT` is inlined.  Now for the other key instructions.  
+```
+LIT:            ; The next two bytes in the instruction stream are the literal value.
+  push DE       ; Push the current ToS (DE, in this case).
+  ld E, (HL)
+  inc HL
+  ld D, (HL)
+  inc HL        ; Read the literal instruction argument into ToS (DE).
+  [NEXT]        ; Total: 37 Ts + 39 Ts [NEXT] = 76 Ts.
+
+VAR:            ; The next two bytes in the instruction stream are the variable address.
+  push DE       ; Push the current ToS.
+  ld E, (HL)
+  inc HL
+  ld D, (HL)
+  inc HL        ; Now DE holds the variable's address.
+  ex DE, HL
+  ld A, (HL)
+  inc HL
+  ld H, (HL)
+  ld L, A
+  ex DE, HL     ; Now DE (ToS) holds the variable's value.
+  [NEXT]        ; Total: 64 Ts + 39 Ts [NEXT] = 103 Ts.
+  
+OP1:            ; Arg is in ToS (DE).
+  ...
+  [NEXT]        ; Total overhead: 0 + 39 Ts [NEXT] = 39 Ts.
+  
+OP2:            ; Args are ToS (DE) and on stack.
+  pop HL        ; Now HL and DE hold args.
+  ...
+  [NEXT]        ; Total overhead: 10 + 39 Ts [NEXT] = 49 Ts.
+```
+This approach is paying a hefty performance cost to have single-byte instruction tokens.
