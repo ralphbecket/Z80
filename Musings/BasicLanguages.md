@@ -82,7 +82,7 @@ To ground the argument, I'm going to restrict discussion to the following VM "in
 
 Later on I intend to introduce `CALL` and `RET` instructions when exploring how user-defined functions might be supported.
 
-## Keeping the Top-of-Stack in a Register
+## Keeping the Top-of-Stack (ToS) in a Register
 
 A common optimisation in Forth implementations is to keep the topmost stack item in a register rather than in memory.  I'm going to assume that optimisation is in play for the purposes of this discussion.
 
@@ -139,8 +139,7 @@ This approach pays a hefty performance cost to have single-byte instruction toke
 
 ## Interpreting Pointers or Direct Threaded Code (Stack-as-IP Version)
 
-DTC (another Forth-ism) replaces 8-bit tokens with the 16-bit addresses of the corresponding instruction implementations.  Now, stack operations on the Z80 are about two and a half times as fast as the equivalent register-based code (10 Ts vs 26 Ts), and a single `ret` op-code will pop an address off the stack and jump to it in only 10 Ts.  This suggests what I believe to be a novel idea: store the "simple form" instructions in reverse order and fetch them via the stack.  Of course, this makes data operations on the stack more costly, but let's explore the idea and see what it produces.  In this scheme, `SP` is the instruction pointer and, say, `HL` will be
-our data stack pointer and `DE` will be ToS.
+DTC (another Forth-ism) replaces 8-bit tokens with the 16-bit addresses of the corresponding instruction implementations.  Now, stack operations on the Z80 are about two and a half times as fast as the equivalent register-based code (10 Ts vs 26 Ts), and a single `ret` op-code will pop an address off the stack and jump to it in only 10 Ts.  This suggests what I believe to be a novel idea: store the "simple form" instructions in reverse order and fetch them via the stack.  Of course, this means we have to use another (much slower) register pair for our data stack, but let's explore the idea and see what it produces.  In this scheme, `SP` is the instruction pointer, `HL` will be our data stack pointer, and `DE` will be ToS.
 ```
 NEXT:
   ret           ; Total overhead: 10 Ts.  Inlined below.
