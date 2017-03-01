@@ -171,9 +171,12 @@ OP1:
   ret           ; Total overhead: 10 Ts.
   
 OP2:
-  pop BC        ; Args are in BC, DE.
+  ld C, (HL)
+  inc HL
+  ld B, (HL)
+  inc HL        ; Args are in BC, DE.
   ...
-  ret           ; Total overhead: 20 Ts.
+  ret           ; Total overhead: 36 Ts.
 ```
 This is substantially faster than ITC in every respect (although calling and returning from functions will be slower -- I'll discuss this later).
 
