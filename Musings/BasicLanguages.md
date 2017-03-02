@@ -253,3 +253,23 @@ OP2:
 | STC (Compiled) |      0 |    21 |    27 |    27 |    37 |
 
 Instruction stream size is slightly larger for STC than TTC (the most compact option): one extra byte for `LIT` and `VAR`, two or three extra bytes for `OP1` and `OP2`.  I would gladly accept that trade-off -- in my experience, data typically outweighs code by a substantial factor.
+
+## The Scores on the Doors: Expressions
+
+Returning to the example expression, `-x * (y + 1)` which we converted to
+```
+VAR x
+NEG
+VAR y
+LIT 1
+ADD
+MUL
+```
+we can compare the overheads of the different schemes outlined above:
+
+| Implementation | Cost |
+|----------------|-----:|
+| TTC            |  419 |
+| DTC (Stack IP) |  256 |
+| DTC (Reg. IP)  |  413 |
+| STC (Compiled) |  176 |
