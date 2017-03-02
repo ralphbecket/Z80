@@ -238,7 +238,8 @@ OP1:
                 ; Total overhead: 27 Ts.
 
 OP2:
-  call op2      ; Implementation must `pop` the second argument and return with `ret`.
+  pop DE        ; Now args are in DE, HL.
+  call op2      ; Implementation must return with `ret`.
                 ; Total overhead: 37 Ts.
 ```
 
