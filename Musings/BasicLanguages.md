@@ -100,7 +100,7 @@ JUMP_TABLE:
   jp INSTR_1
   jp INSTR_2
   ...
-  jp INSTR_N    ; Total: 39 Ts.
+  jp INSTR_N    ; Total overhead: 39 Ts.
 ```
 The time taken to reach an instruction's code is 39 Ts (T-states).  If each instruction finishes by jumping to `NEXT` (3 bytes) rather than inlining it (6 bytes) the the total `NEXT` overhead of each instruction is 49 Ts.  For the sake of argument, we'll assume `NEXT` is inlined.  Now for the other key instructions.  
 ```
@@ -124,7 +124,7 @@ VAR:            ; The next two bytes in the instruction stream are the variable 
   ld H, (HL)
   ld L, A
   ex DE, HL     ; Now DE (ToS) holds the variable's value.
-  [NEXT]        ; Total: 64 Ts + 39 Ts [NEXT] = 103 Ts.
+  [NEXT]        ; Total overhead: 64 Ts + 39 Ts [NEXT] = 103 Ts.
   
 OP1:            ; Arg is in ToS (DE).
   ...
@@ -136,6 +136,12 @@ OP2:            ; Args are ToS (DE) and on stack.
   [NEXT]        ; Total overhead: 10 + 39 Ts [NEXT] = 49 Ts.
 ```
 This approach pays a hefty performance cost to have single-byte instruction tokens.  Note that using `HL` as the IP gives us faster access to the instruction stream, but gets in the way of our `OP` implementations because `HL` is the favoured register for 16-bit operations on the Z80.
+
+### Summary so far
+
+| Implementation | `NEXT` | `LIT` | `VAR` | `OP1` | `OP2` |
+|----------------|-------:|------:|------:|------:|------:|
+| TTC            |     39 |    76 |   103 |    39 |    49 |
 
 ## Interpreting Pointers or Direct Threaded Code (Stack-as-IP Version)
 
@@ -150,7 +156,7 @@ LIT:
   ld (HL), E
   dec HL        ; Previous ToS is now on the data stack.
   pop DE        ; Pop the literal value into DE (ToS).
-  ret           ; Total: 46 Ts.
+  ret           ; Total overhead: 46 Ts.
 
 VAR:
   ld (HL), D
@@ -180,7 +186,69 @@ OP2:
 ```
 This is substantially faster than ITC in every respect (although calling and returning from functions will be slower -- I'll discuss this later).
 
+### Summary so far
+
+| Implementation | `NEXT` | `LIT` | `VAR` | `OP1` | `OP2` |
+|----------------|-------:|------:|------:|------:|------:|
+| TTC            |     39 |    76 |   103 |    39 |    49 |
+| DTC (Stack)    |     10 |    46 |    64 |    10 |    36 |
+
 ## Interpreting Pointers or Direct Threaded Code (Non-stack-as-IP Version)
 
-We might prefer to use the stack for data rather than for our instruction stream, in which case we end up with something like this:
-...
+We might prefer to use the stack for data rather than for our instruction stream, in which case we end up with something like the following, where I've elected to use `SP` for the data stack, keep ToS in `BC`, and the instruction pointer in `HL`:
+```
+NEXT:
+  ld E, (HL)
+  inc HL
+  ld D, (HL)
+  inc HL
+  ex DE, HL
+  jp (HL)       ; Note: every instruction *must* start with 'ex DE, HL'!
+                ; Total overhead: 38 Ts (including the extra 'ex DE, HL' in each instruction).
+```
+The remaining operations are essentially identical to those for the TTC implementation (i.e., have the same costs), the only differences being that `NEXT` in this DTC takes 38 Ts compared to 39 Ts for TTC, but at the cost of an extra byte per VM instruction -- a trade-off that hardly seems worthwhile.
+
+### Summary so far
+
+| Implementation | `NEXT` | `LIT` | `VAR` | `OP1` | `OP2` |
+|----------------|-------:|------:|------:|------:|------:|
+| TTC            |     39 |    76 |   103 |    39 |    49 |
+| DTC (Stack IP) |     10 |    46 |    64 |    10 |    36 |
+| DTC (Reg. IP)  |     38 |    75 |   102 |    38 |    48 |
+
+## Naive compilation or Subroutine Threaded Code
+
+STC is, you guessed it, a Forth-ism.  In this approach we forgo interpretation altogether and just emit executable machine code.  Here I've elected to use `HL` to hold ToS:
+```
+NEXT:
+  ; Not needed!  Zero overhead.
+
+LIT:
+  push HL       ; Push previous ToS.
+  ld HL, nn     ; ToS now holds the literal value.
+                ; Total: 21 Ts.
+
+VAR:
+  push HL       ; Push previous ToS.
+  ld HL, (vv)   ; ToS now holds the variable's value.
+                ; Total: 27 Ts.
+                
+OP1:
+  call op1      ; Implementation must return with `ret`.
+                ; Total overhead: 27 Ts.
+
+OP2:
+  call op2      ; Implementation must `pop` the second argument and return with `ret`.
+                ; Total overhead: 37 Ts.
+```
+
+### Summary so far
+
+| Implementation | `NEXT` | `LIT` | `VAR` | `OP1` | `OP2` |
+|----------------|-------:|------:|------:|------:|------:|
+| TTC            |     39 |    76 |   103 |    39 |    49 |
+| DTC (Stack IP) |     10 |    46 |    64 |    10 |    36 |
+| DTC (Reg. IP)  |     38 |    75 |   102 |    38 |    48 |
+| STC (Compiled) |      0 |    21 |    27 |    27 |    37 |
+
+Instruction stream size is slightly larger for STC than TTC (the most compact option): one extra byte for `LIT` and `VAR`, two extra bytes for `OP1` and `OP2`.  I would gladly accept that trade-off -- in my experience, data typically outweighs code by a substantial factor.
