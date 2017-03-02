@@ -273,3 +273,19 @@ we compare the overheads of the different schemes outlined above:
 | DTC (Stack IP) |  256 |    x1.6 |
 | DTC (Reg. IP)  |  413 |    x1.0 |
 | STC (Compiled) |  176 |    x2.4 |
+
+The STC scheme has one further advantage not available to the others: many standard operators can be implemented in just a few bytes of Z80 machine code, in which case it might make more sense to just inline them than to use `call`s.  For example:
+
+```
+NEG:
+  ex DE, HL
+  xor A
+  ld L, A
+  ld H, A
+  sbc HL, DE    ; Total: 31 Ts, 6 bytes.
+  
+ADD:
+  pop DE
+  add HL, DE    ; Total: 25 Ts, 2 bytes.
+```
+Using `call`s, the total time for the expression would be 232 Ts; inlining, the total time would be 168 Ts (neither counting the cost of the `MUL`, which would be substantial).
