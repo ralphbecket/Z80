@@ -265,11 +265,11 @@ LIT 1
 ADD
 MUL
 ```
-we can compare the overheads of the different schemes outlined above:
+we compare the overheads of the different schemes outlined above:
 
-| Implementation | Cost |
-|----------------|-----:|
-| TTC            |  419 |
-| DTC (Stack IP) |  256 |
-| DTC (Reg. IP)  |  413 |
-| STC (Compiled) |  176 |
+| Implementation | Cost | Speedup |
+|----------------|-----:|--------:|
+| TTC            |  419 |    x1.0 |
+| DTC (Stack IP) |  256 |    x1.6 |
+| DTC (Reg. IP)  |  413 |    x1.0 |
+| STC (Compiled) |  176 |    x2.4 |
