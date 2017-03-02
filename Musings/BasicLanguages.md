@@ -252,4 +252,4 @@ OP2:
 | DTC (Reg. IP)  |     38 |    75 |   102 |    38 |    48 |
 | STC (Compiled) |      0 |    21 |    27 |    27 |    37 |
 
-Instruction stream size is slightly larger for STC than TTC (the most compact option): one extra byte for `LIT` and `VAR`, two extra bytes for `OP1` and `OP2`.  I would gladly accept that trade-off -- in my experience, data typically outweighs code by a substantial factor.
+Instruction stream size is slightly larger for STC than TTC (the most compact option): one extra byte for `LIT` and `VAR`, two or three extra bytes for `OP1` and `OP2`.  I would gladly accept that trade-off -- in my experience, data typically outweighs code by a substantial factor.
