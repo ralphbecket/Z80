@@ -86,7 +86,7 @@ Later on I intend to introduce `CALL` and `RET` instructions when exploring how 
 
 A common optimisation in Forth implementations is to keep the topmost stack item in a register rather than in memory.  I'm going to assume that optimisation is in play for the purposes of this discussion.
 
-## Interpreting tokens or Token Threaded Code
+## Interpreting Tokens or Token Threaded Code
 
 TTC is a Forth-ism where each simple-form instruction must be examined to decide how it should be handled.  In this case, we might reasonably assume there are only a modest number of such which could be nicely handled with a jump table.  Let's assume the jump table all sits in the same 256-byte aligned "page" of memory, that tokens are just the low-byte of the corresponding jump-table addresses, and, reasonably, that we want to use a faster, non-indexed register pair as our "instruction pointer", which I'll abbreviate as IP.  This looks about the best one could do:
 ```
@@ -169,7 +169,7 @@ VAR:
   inc HL
   ld H, (HL)
   ld L, A
-  ex de, HL     ; Now DE (ToS) holds the variable's value.
+  ex DE, HL     ; Now DE (ToS) holds the variable's value.
   ret           ; Total: 64 Ts.
 
 OP1:
@@ -184,7 +184,7 @@ OP2:
   ...
   ret           ; Total overhead: 36 Ts.
 ```
-This is substantially faster than ITC in every respect (although calling and returning from functions will be slower -- I'll discuss this later).
+This is substantially faster than TTC in every respect (although calling and returning from functions will be slower -- I'll discuss this later).
 
 ### Summary so far
 
@@ -274,7 +274,7 @@ we compare the overheads of the different schemes outlined above:
 | DTC (Reg. IP)  |  413 |    x1.0 |
 | STC (Compiled) |  176 |    x2.4 |
 
-The STC scheme has one further advantage not available to the others: many standard operators can be implemented in just a few bytes of Z80 machine code, in which case it might make more sense to just inline them than to use `call`s.  For example:
+The STC scheme has one further advantage not available to the others: many standard operators can be implemented in just a few bytes of Z80 machine code, in which case it might make more sense to just inline them rather than use `call`s.  For example:
 
 ```
 NEG:
@@ -288,4 +288,27 @@ ADD:
   pop DE
   add HL, DE    ; Total: 25 Ts, 2 bytes.
 ```
-Using `call`s, the total time for the expression would be 232 Ts; inlining, the total time would be 168 Ts (neither counting the cost of the `MUL`, which would be substantial).
+Using `call`s, the total time for the expression would be 232 Ts; inlining, the total time would be 168 Ts (neither counting the cost of the `MUL`, which would be substantial).  Note that the other schemes use `HL` as the instruction pointer or data stack pointer, which, due to `HL`'s privileged status on the Z80, makes implementing these operations more awkward.  For example:
+```
+; In schemes where HL is reserved for something important...
+NEG:
+  ld C, L
+  ld B, H
+  xor A
+  ld L, A
+  ld H, A
+  sbc HL, DE
+  ld L, C
+  ld H, B
+  [NEXT]        ; Total: 43 + [OP1] Ts.
+  
+ADD:
+  ld A, C
+  add A, E
+  ld E, A
+  adc A, B
+  sub A, C
+  ld D, A
+  [NEXT]        ; Total: 24 + [OP2] Ts.
+```
+Interpretation really does jack up the costs, particularly for the simplest, most common operations.
