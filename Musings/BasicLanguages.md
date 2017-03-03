@@ -288,7 +288,9 @@ ADD:
   pop DE
   add HL, DE    ; Total: 25 Ts, 2 bytes.
 ```
-Using `call`s, the total time for the expression would be 232 Ts; inlining, the total time would be 168 Ts (neither counting the cost of the `MUL`, which would be substantial).  Note that the other schemes use `HL` as the instruction pointer or data stack pointer, which, due to `HL`'s privileged status on the Z80, makes implementing these operations more awkward.  For example:
+Using `call`s, the total time for the expression would be 232 Ts; inlining, the total time would be 168 Ts (neither counting the cost of the `MUL`, which would be substantial).  
+
+Note that the other schemes use `HL` as the instruction pointer or data stack pointer, which, due to `HL`'s privileged status on the Z80, makes implementing these operations more awkward.  For example:
 ```
 ; In schemes where HL is reserved for something important...
 NEG:
