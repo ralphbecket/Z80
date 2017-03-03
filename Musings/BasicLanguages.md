@@ -17,11 +17,11 @@ Ahhh, the Z80.  No two registers seem to do the same things.  It suffices to say
 
 I'll be comparing instruction sequences in terms of the number of "T-states" (i.e., clock ticks) it takes the Z80 to carry them out.
 
-## A digression regarding Forth
+## A Digression Regarding Forth
 
 Horrible language, never liked it, with the sole redeeming feature of being somewhat quicker than the Basic interpreters of the day.  I will return to this at some point.  That said, the Forth philosophy of reaching for simplicity is worth emulating.
 
-## What are we talking about?
+## What Are We Talking About?
 
 I'm going to posit a Basic-like language with the following kinds of structures:
 
@@ -43,7 +43,11 @@ The syntax doesn't matter too much, although we'd obviously prefer to keep it Ba
 
 User-defined functions can be added, but that's also something I intend to come back to in a bit.
 
-## Virtual machines
+## What Aren't We Talking About?
+
+I'm not going to think about any real optimisations: no constant folding, no register allocation, no common sub-expression elimination.  The reason being that those things are relatively hard to very hard to accomplish, especially if you want a quick, reliable scheme amenable to the Basic REPL environment of the day.
+
+## Virtual Machines
 
 Regardless of whether we're implementing a pure interpreter (every line is parsed and evaluated every time it is visited), a tokenising interpreter (every line is pre-parsed on entry into some "simpler form" and these simpler forms are then interpreted), or a compiler (like a tokenising interpreter, but the "simpler forms" are executable machine code), we need to talk about the "virtual machine" which will evaluate these "simpler forms".
 
