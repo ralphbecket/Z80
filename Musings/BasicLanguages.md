@@ -33,7 +33,7 @@ I'm going to posit a Basic-like language with the following kinds of structures:
 
 * `if e1 ... elif e2 ... else ... end`
 
-* `while e ... end`
+* `while e ... end` along with the usual `break` and `continue`
 
 * Optionally `goto` and `gosub` and `:labels`, but these are neither here nor there.
 
