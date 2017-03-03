@@ -318,3 +318,36 @@ ADD:
   [NEXT]        ; Total: 24 + [OP2] Ts.
 ```
 Interpretation really does jack up the costs, particularly for the simplest, most common operations.
+
+## Implementing Basic Control Flow Structures
+
+There are two standard imperative control-flow structures: `if-elif-else-end` and `while-continue-break-end` (where `continue` jumps back to the start of the loop and `break` exits the loop).  (The likes of `goto` and `gosub` are left as exercises for the sordid.)
+
+### if-elif-else-end
+
+The simple form of `if e1 st1 elif e2 st2 ... else st end` is
+```
+  ; `if e1 st1`
+  [[e1]]
+  JPZ -a-       ; Jump to -a- if the ToS is zero.
+  [[st1]]
+  JP -z-
+-a-
+  ; `elif e2 st2`
+  [[e2]]
+  JPZ -b-
+  [[st2]]
+  JP -z-
+-b-
+  ; ...
+-e-
+  ; `else st`
+  [[st]]
+-z-             ; End of `if` statement.
+```
+
+This is straightforward to generate in a single-pass.  First, we have a single variable `LastElseJp` holding the address of the previous `JPZ` for an `if` or `elif` which we fill in once we reach the next `elif` or `else`.  Second, we have a linked list `IfExitList` which links together all the `JP -z-` exits from the `if` and `elif` clauses.  Once we reach the `end`, we can fill in the `JP` targets in the `IfExitList`.
+
+### while-continue-break-end
+
+To do...
