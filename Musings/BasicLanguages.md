@@ -325,29 +325,55 @@ There are two standard imperative control-flow structures: `if-elif-else-end` an
 
 ### if-elif-else-end
 
-The simple form of `if e1 st1 elif e2 st2 ... else st end` is
+The simple form of `if e1 st1 elif e2 st2 ... else st end`, where `st` stands for an arbitrary sequence of statements, is
 ```
-  ; `if e1 st1`
-  [[e1]]
+  [[e1]]        ; `if e1 st1`
   JPZ -a-       ; Jump to -a- if the ToS is zero.
   [[st1]]
   JP -z-
 -a-
-  ; `elif e2 st2`
-  [[e2]]
+  [[e2]]        ; `elif e2 st2`
   JPZ -b-
   [[st2]]
   JP -z-
 -b-
   ; ...
 -e-
-  ; `else st`
-  [[st]]
+  [[st]]        ; `else st`
 -z-             ; End of `if` statement.
 ```
 
-This is straightforward to generate in a single-pass.  First, we have a single variable `LastElseJp` holding the address of the previous `JPZ` for an `if` or `elif` which we fill in once we reach the next `elif` or `else`.  Second, we have a linked list `IfExitList` which links together all the `JP -z-` exits from the `if` and `elif` clauses.  Once we reach the `end`, we can fill in the `JP` targets in the `IfExitList`.
+This is straightforward to generate in a single pass.  First, we have a variable `LastElseJp` holding the address of the previous `JPZ` for an `if` or `elif` which we fill in once we reach the next `elif` or `else`.  Second, we have a linked list `IfExitList` which links together all the `JP -z-` exits from the `if` and `elif` clauses.  Once we reach the `end`, we can fill in the `JP` targets in the `IfExitList`.
+
+The instruction `JP nn` and `JPZ nn` instructions, under the compilation model, are just
+```
+JP:
+  jp nn         ; Total: 10 Ts.
+  
+JPZ:
+  ld A, L       ; Test ToS for zero.
+  or H
+  pop HL        ; Restore ToS, flags are unaffected.
+  jp z, nn      ; Total: 18 Ts.
+```
+
+Note: a potentially useful micro-optimization would be to not emit the first `push HL` when generating code for an expression, assuming we .  However, doing this would add a certain amount of complexity to the code generator.
 
 ### while-continue-break-end
 
-To do...
+The simple form of `while e st1 continue st2 break st3 end`, where the `continue` and `break` statements are optional and in any order, is
+```
+-a-
+  [[e]]         ; `while e`
+  JPZ -z-
+  [[st1]]
+  JP -a-        ; `continue`
+  [[st2]]
+  JP -z-        ; `break`
+  [[st3]]
+  JP -a-        ; `end`
+-z-
+```
+
+Again, this is straightforward to generate in a single pass.  First we have a variable `LoopStart` holding the address if the loop entry point which we use to fill in the `JP -a-` instructions for `continue` and `end`.  Second, we have a `LoopExitList` which links together all the `JP -z-` exits from the `while` termination test and `break` statements.  Once we reach the `end`, we can fill in the `JP -z-` targets in the `LoopExitList`.
+
