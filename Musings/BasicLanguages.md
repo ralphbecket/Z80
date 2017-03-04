@@ -357,7 +357,7 @@ JPZ:
   jp z, nn      ; Total: 18 Ts.
 ```
 
-Note: a potentially useful micro-optimization would be to not emit the first `push HL` when generating code for an expression, assuming we .  However, doing this would add a certain amount of complexity to the code generator.
+Note: a potentially useful micro-optimization would be to not emit the first `push HL` when generating code for an expression, assuming we immediately consume the result of any expression.  However, doing this would add a certain amount of complexity to the code generator.
 
 ### while-continue-break-end
 
@@ -377,3 +377,4 @@ The simple form of `while e st1 continue st2 break st3 end`, where the `continue
 
 Again, this is straightforward to generate in a single pass.  First we have a variable `LoopStart` holding the address if the loop entry point which we use to fill in the `JP -a-` instructions for `continue` and `end`.  Second, we have a `LoopExitList` which links together all the `JP -z-` exits from the `while` termination test and `break` statements.  Once we reach the `end`, we can fill in the `JP -z-` targets in the `LoopExitList`.
 
+**Note** that `break` and `continue` are valid anywhere in the context of a loop, but `else` and `elif` are only valid in the immediate context of an `if` statement.
