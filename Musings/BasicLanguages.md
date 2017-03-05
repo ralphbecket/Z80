@@ -383,4 +383,6 @@ Again, this is straightforward to generate in a single pass.  First we have a va
 
 Any real language has some support for functions -- hence many BASICs from the 1980s were not real languages.
 
-How might we implement functions in our Basic-like language?  
+How might we implement functions in our Basic-like language?  It turns out that we can do so easily and efficiently on the Z80 *if* we forgo recursion.  In my experience (and, as a functional programmer, it pains me to say this), few programmers out there understand or use recursion, so let's first see what happens if we *do* abandon support for recursion.  Indeed, this restriction works rather nicely with the single-pass compilation approach I'm advocating here: if we require that every function be defined before it is called (and don't admit functions as first class citizens -- this is a basic language, after all) then not only do we guarantee to have a symbol table entry ready for when we see a function call, but we prevent functions from calling themselves recursively.
+
+Why is this helpful when it comes to generating efficient Z80 code?
