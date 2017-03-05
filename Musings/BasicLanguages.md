@@ -408,4 +408,8 @@ The total cost of the prologue and epilogue is 107 T-states (not counting the `c
 
 ### Abandoning Recursion
 
-If we don't support recursion then every function parameter and local variable can have a fixed address, just like any other variable, and use the same `ld HL, (x)` and `ld (x), HL` instructions, at 16 T-states per access.
+If we don't support recursion then every function parameter and local variable can have a fixed address, just like any other variable, and use the same `ld HL, (x)` and `ld (x), HL` instructions, at 16 T-states per access, and no function prologue or epilogue code is required.  Yes, we sacrifice expressive power, but this discussion is firmly rooted in the world of 1980s home computing where squeezing some speed out of the hardware was a priority.  That, plus the fact that Joe Programmer tragically wouldn't know one end of a recursive function from the other.  I digress.
+
+### Compiling Non-Recursive Functions
+
+... Fill this in!
