@@ -385,4 +385,27 @@ Any real language has some support for functions -- hence many BASICs from the 1
 
 How might we implement functions in our Basic-like language?  It turns out that we can do so easily and efficiently on the Z80 *if* we forgo recursion.  In my experience (and, as a functional programmer, it pains me to say this), few programmers out there understand or use recursion, so let's first see what happens if we *do* abandon support for recursion.  Indeed, this restriction works rather nicely with the single-pass compilation approach I'm advocating here: if we require that every function be defined before it is called (and don't admit functions as first class citizens -- this is a basic language, after all) then not only do we guarantee to have a symbol table entry ready for when we see a function call, but we prevent functions from calling themselves recursively.
 
-Why is this helpful when it comes to generating efficient Z80 code?
+### Supporting Recursion is Costly
+
+Why is giving up recursion helpful when it comes to generating efficient Z80 code?  The answer is that the Z80 has absolutely poxy support for relative address indirection.  By that I mean that if you want to access an offset from a computed address, you have to use `ld r, (IX+n)` and `ld (IX+n), r`, each of which cost 19 T-states.  So accessing a 16-bit quantity like this costs, at minimum, 38 T-states.  This starts to add up quickly in common-case code.  To illustrate, the usual scheme is to use `IX` as a stack-frame pointer and to access function parameters and locals via `IX+n`.  Functions, using this approach, look something like this:
+```
+FunctionPrologue:       ; We assume that the function arguments have been pushed on to the stack.
+  push IX               ; Save the previous frame pointer. 
+  ld IX, -2m - 2        ; Assuming n 16-bit arguments and m 16-bit locals.
+  add IX, SP            ; Now IX is the base of the new stack frame.
+  ld SP, IX             ; Set the stack pointer.
+  ...
+  function body
+  ...
+FunctionEpilogue
+  ld IX, 2m + 2
+  add IX, SP
+  ld SP, IX
+  pop IX
+  ret
+```
+The total cost of the prologue and epilogue is 107 T-states (not counting the `call` and `ret`) and every variable access costs 38 T-states.  Yikes!
+
+### Abandoning Recursion
+
+If we don't support recursion then every function parameter and local variable can have a fixed address, just like any other variable, and use the same `ld HL, (x)` and `ld (x), HL` instructions, at 16 T-states per access.
