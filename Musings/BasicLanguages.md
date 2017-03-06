@@ -74,6 +74,8 @@ where `LVAR x` pushes the address of variable `x`, `[[e]]` denotes the simpler f
 
 I claim that the speed of our language will be dictated by how efficiently expressions are evaluated, since that is what programs will spend most of their time doing.
 
+(To be clear: to the best of my knowledge, pretty much any of what I describe below would be substantially faster than any 1980s Basic interpreter.)
+
 ## Core VM Instructions
 
 To ground the argument, I'm going to restrict discussion to the following VM "instructions":
@@ -409,6 +411,54 @@ The total cost of the prologue and epilogue is 107 T-states (not counting the `c
 ### Abandoning Recursion
 
 If we don't support recursion then every function parameter and local variable can have a fixed address, just like any other variable, and use the same `ld HL, (x)` and `ld (x), HL` instructions, at 16 T-states per access, and no function prologue or epilogue code is required.  Yes, we sacrifice expressive power, but this discussion is firmly rooted in the world of 1980s home computing where squeezing some speed out of the hardware was a priority.  That, plus the fact that Joe Programmer tragically wouldn't know one end of a recursive function from the other.  I digress.
+
+Either way, we'd like to be able to write something like the following:
+```
+fn SqDiff x y:
+  diff = (x + y) * (x - y)
+  return diff
+end
+
+...
+print SqDiff 4 3
+```
+and have it compile to something approximating the following:
+```
+SqDiff:
+  ld HL, f_diff         ; The l-value of the assignment.
+  push HL
+  ld HL, (f_x)          ; `(x + y)`
+  push HL
+  ld HL, (f_y)
+  pop DE
+  add HL, DE
+  push HL
+  ld HL, (f_x)          ; `(x - y)`
+  push HL
+  ld HL, (f_y)
+  pop DE
+  xor A
+  ex DE, HL
+  sbc HL, DE
+  pop DE                ; `(x + y) * (x - y)`
+  call MUL
+  pop DE                ; `diff = (x + y) * (x - y)`
+  ex DE, HL
+  ld (HL), E
+  inc HL
+  ld (HL), D
+  ld HL, (diff)         ; `ret diff`
+  ret
+  
+...
+  ld HL, 4              ; print 4 3
+  ld (f_x), HL
+  ld HL, 3
+  ld (f_y), HL
+  call SqDiff
+  call PRINT
+```
+Okay, somewhat flabby compared to hand-crafted code, but a veritable speed demon next to anything interpreted.
 
 ### Compiling Non-Recursive Functions
 
