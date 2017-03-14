@@ -462,4 +462,32 @@ Okay, somewhat flabby compared to hand-crafted code, but a veritable speed demon
 
 ### Compiling Non-Recursive Functions
 
-... Fill this in!
+The basic points/steps involved are:
+- functions introduce a new namespace, so the symbol table structure needs to support at least one level of nesting (global and local);
+- we may need to surround the function definition with `jp EndOfFnDefn: [[fn definition]]: EndOfFnDefn`, so we'll need to record the address of that `jp` so we can fill in the jump target after compiling the function body;
+- parsing the parameter list, we'll need to note the parameter names (these may shadow names in the global scope) and assign addresses for their values;
+- to compile function calls elsewhere in the program, we'll need to record the number and addresses of parameters in the symbol table entry for the function;
+- after compiling the function body, we need to return to the global namespace, to which we must also add a reference to the new function.
+
+## Implementing Expressions
+
+Forth gets around a lot of "problems" (for the compiler writer, anyway) by abandoning all error checking and requiring the user to convert all expressions into reverse Polish notation (i.e., args first, then operators).  Ugh.  Just unreadable.  Non write-only Forth programs tend to include stack diagram comments on every line.  Given that there will probably be more users than compiler writers, it behooves the compiler writer to put a little effort in to benefit said users.  That means we want proper expressions, supporting at the very least prefix and infix operators (with precedence) and parentheses for sub-expressions.
+
+It turns out this is _not hard_.  The classic shunting yard algorithm is simple to implement.  The core of the shunting yard algorithm can be summarised as:
+- if we see an 'atom' (a variable or constant) we emit code directly;
+- if we see an operator, we emit code for any pending operators on the stack with higher precedence, then we push the new operator on to the stack;
+- tidy up the loose ends when we're done.
+
+For my minimalist non-rubbish language, I'm going to claim that the following regular expression supports just what we want:
+```
+  pfx* atom ( ifx pfx* atom )*
+```
+where `pfx` denotes a prefix operator, `ifx` and infix operator, and `atom` a variable, constant, or function application.  In the Wirthian style, we'll arrange things so that our compiler maintains sufficient context to identify errors such as mismatched parentheses.  Speaking of which, in this scheme we can treat
+- `(` as a special prefix operator and
+- `)` as a special infix operator.
+
+Each operator needs the following things recorded in the symbol table: its name, its fixity (prefix or infix), and a pointer to the code to generate operator applications (this code should also handle things such as operator precedence).
+
+## The Compilation State Machine
+
+Fill this in!
