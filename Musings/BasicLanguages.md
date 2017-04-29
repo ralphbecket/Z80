@@ -490,4 +490,14 @@ Each operator needs the following things recorded in the symbol table: its name,
 
 ## The Compilation State Machine
 
-Fill this in!
+I'm going to describe a simple compiler as a state machine with a stack.  To start with, I'll cover expression compilation.  Following the regular expression above, we have states: *atPfx*, *atAtom*, *atIfx*, and *atEnd*.  We will store on the stack pointers to code to generate prefix and infix expressions at the appropriate points.
+
+*InitExpr*: push `EndExpr`, push `EndPfx`, set state to *atPfx*.
+
+*On Prefix Op*:
+- If *atPfx*, push the op.
+- If *atAtom*, set state to *atEnd*, execute the ops on the stack (the prefix op token is _not_ consumed).
+- If *atIfx*, push `EndPfx`, push the op, set state to *atPfx*.
+
+*On Atom*:
+- If *atPfx*, XXX HERE!
