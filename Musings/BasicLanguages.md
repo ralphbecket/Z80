@@ -480,24 +480,23 @@ It turns out this is _not hard_.  The classic shunting yard algorithm is simple 
 
 For my minimalist non-rubbish language, I'm going to claim that the following regular expression supports just what we want:
 ```
-  pfx* atom ( ifx pfx* atom )*
+  pfx* atom afx* ( ifx pfx* atom afx* )*
 ```
-where `pfx` denotes a prefix operator, `ifx` and infix operator, and `atom` a variable, constant, or function application.  In the Wirthian style, we'll arrange things so that our compiler maintains sufficient context to identify errors such as mismatched parentheses.  Speaking of which, in this scheme we can treat
+where `pfx` denotes a prefix operator, `afx` an affix (or postfix) operator, `ifx` an infix operator, and `atom` a variable, constant, or function application.  In the Wirthian style, we'll arrange things so that our compiler maintains sufficient context to identify errors such as mismatched parentheses.  Speaking of which, in this scheme we can treat
 - `(` as a special prefix operator and
-- `)` as a special infix operator.
+- `)` as a special affix operator.
 
 Each operator needs the following things recorded in the symbol table: its name, its fixity (prefix or infix), and a pointer to the code to generate operator applications (this code should also handle things such as operator precedence).
 
 ## The Compilation State Machine
 
-I'm going to describe a simple compiler as a state machine with a stack.  To start with, I'll cover expression compilation.  Following the regular expression above, we have states: *atPfx*, *atAtom*, *atIfx*, and *atEnd*.  We will store on the stack pointers to code to generate prefix and infix expressions at the appropriate points.
+I'm going to describe a simple compiler as a state machine with a stack.  To start with, I'll cover expression compilation.  Following the regular expression above, we have states: *AtPfx*, *AtAtom*, and *AtIfx*.  We will store on the stack pointers to code to generate prefix and infix expressions at the appropriate points.
 
-*InitExpr*: push `EndExpr`, push `EndPfx`, set state to *atPfx*.
+| Token | AtPfx | AtAtom | AtIfx |
+| ----- | ----- | ------ | ----- |
+| *Pfx* | Push pfx gen | End expr | Go to *AtPfx* <br> Push pfx gen |
+| *Atom* | Gen atom <br> Gen pfxs <br> Go to *AtAtom* | End expr | Gen atom <br> Go to *AtAtom* |
+| *Afx* | Error! | Gen afx | Error! |
+| *Ifx* | Error! | Push/gen ifx <br> Go to *AtIfx* | Error! |
 
-*On Prefix Op*:
-- If *atPfx*, push the op.
-- If *atAtom*, set state to *atEnd*, execute the ops on the stack (the prefix op token is _not_ consumed).
-- If *atIfx*, push `EndPfx`, push the op, set state to *atPfx*.
-
-*On Atom*:
-- If *atPfx*, XXX HERE!
+XXX MORE TO COME...
