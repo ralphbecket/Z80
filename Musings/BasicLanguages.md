@@ -490,13 +490,23 @@ Each operator needs the following things recorded in the symbol table: its name,
 
 ## The Compilation State Machine
 
-I'm going to describe a simple compiler as a state machine with a stack.  To start with, I'll cover expression compilation.  Following the regular expression above, we have states: *AtPfx*, *AtAtom*, and *AtIfx*.  We will store on the stack pointers to code to generate prefix and infix expressions at the appropriate points.
+I'm going to describe a simple compiler as a state machine with a stack.  To start with, I'll cover expression compilation.  Following the regular expression above, we have two states: *AtPfx*, which must be followed by an atom or prefix operator, and *AtAtom*, which either terminates the expression or must be followed by an affix or infix operator.
 
-| Token | AtPfx | AtAtom | AtIfx |
-| ----- | ----- | ------ | ----- |
-| *Pfx* | Push pfx gen | End expr | Go to *AtPfx* <br> Push pfx gen |
-| *Atom* | Gen atom <br> Gen pfxs <br> Go to *AtAtom* | End expr | Gen atom <br> Go to *AtAtom* |
-| *Afx* | Error! | Gen afx | Error! |
-| *Ifx* | Error! | Push/gen ifx <br> Go to *AtIfx* | Error! |
+| Token | AtPfx | AtAtom |
+| ----- | ----- | ------ |
+| *Pfx* | Push pfx gen | End expr |
+| *Atom* | Gen atom <br> Gen pfxs <br> Go to *AtAtom* |
+| *Afx* | Error! | Gen afx |
+| *Ifx* | Error! | Push/gen ifx <br> Go to *AtPfx* |
 
-XXX MORE TO COME...
+To make this concrete, I present an example of how the expression `-(x + 3 * -y)` would be compiled.
+
+| Token | State    | Action | Stack | Generated Code |
+| ----- | -----    | ------ | ----- | -------------- |
+| start | *        | Push state <br> Push `EndExpr, 0, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`0`<br>`EndExpr` | |
+| -     | *AtPfx*  | If *AtPfx* push `GenNeg` <br> If *AtAtom* treat as infix... | `GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | |
+| (     | *AtPfx*  | If not *AtPfx* close expr <br> Else push `GenLPar, 1, EndPfx` | `EndPfx`<br>1<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | |
+| x     | *AtPfx*  | If not *AtPfx* close expr <br> Else gen `Var x`, ret | `EndPfx`<br>`1`<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | `Var x` |
+| | `EndPfx`: Go to *AtAtom* | `1`<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | |
+| +     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenAdd, 4, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`4`<br>`GenAdd`<br>`1`<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | |
+| 3     | *AtPfx*  | If not *AtPfx* close expr <br> Else gen `Lit 3`, ret |`EndPfx`<br>`4`<br>`GenAdd`<br>`1`<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0`<br>`EndExpr` | `Lit 3` |
