@@ -511,7 +511,7 @@ To make this concrete, I present an example of how the expression `-(x + 3 * -y)
 | +     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenAdd, 4, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
 | 3     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Lit 3`, ret |`EndPfx`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Lit 3` |
 |       | *AtPfx*  | `EndPfx`: Go to *AtAtom* | `4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| *     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenMul, 3, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`3 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| -     | *AtPfx*  | If *AtPfx* push `GenNeg` <br> If *AtAtom* treat as infix... | `GenNeg`<br>`EndPfx`<br>`3 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| y     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Var y`, ret | `GenNeg`<br>`EndPfx`<br>`3 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Var y` |
+| *     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenMul, 5, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
+| -     | *AtPfx*  | If *AtPfx* push `GenNeg` <br> If *AtAtom* treat as infix... | `GenNeg`<br>`EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
+| y     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Var y`, ret | `GenNeg`<br>`EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Var y` |
 
