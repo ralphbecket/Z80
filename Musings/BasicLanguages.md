@@ -499,19 +499,21 @@ I'm going to describe a simple compiler as a state machine with a stack.  To sta
 | *Afx* | Error! | Gen afx |
 | *Ifx* | Error! | Push/gen ifx <br> Go to *AtPfx* |
 
-To make this concrete, I present an example of how the expression `-(x + 3 * -y)` would be compiled.
+To make this concrete, I present an example of how the expression `-(x + 3 * -y) ...` would be compiled.
 
 | Token | State    | Action | Stack | Generated Code |
 | ----- | -----    | ------ | ----- | -------------- |
 | start | *        | Push state <br> Push `EndExpr, 0, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`0 EndExpr` | |
 | -     | *AtPfx*  | If *AtPfx* push `GenNeg` <br> If *AtAtom* treat as infix... | `GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
 | (     | *AtPfx*  | If not *AtPfx* close expr <br> Push `1 GenLPar, EndPfx` | `EndPfx`<br>1<br>`GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| x     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Var x`, ret | `EndPfx`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Var x` |
+| x     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `VAR x`, ret | `EndPfx`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `VAR x` |
 |       | *AtPfx*  | `EndPfx`: Go to *AtAtom* | `1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
 | +     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenAdd, 4, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| 3     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Lit 3`, ret |`EndPfx`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Lit 3` |
+| 3     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `LIT 3`, ret |`EndPfx`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `LIT 3` |
 |       | *AtPfx*  | `EndPfx`: Go to *AtAtom* | `4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
 | *     | *AtAtom* | If not *AtAtom* then error! <br> Maybe gen ifx on stack <br> Push `GenMul, 5, EndPfx` <br> Go to *AtPfx* | `EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
 | -     | *AtPfx*  | If *AtPfx* push `GenNeg` <br> If *AtAtom* treat as infix... | `GenNeg`<br>`EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
-| y     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `Var y`, ret | `GenNeg`<br>`EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `Var y` |
-
+| y     | *AtPfx*  | If not *AtPfx* close expr <br> Gen `VAR y`, ret | `GenNeg`<br>`EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `VAR y` |
+|       | *AtPfx*  | `GenNeg`:  Gen `NEG`, ret | `EndPfx`<br>`5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `NEG` |
+|       | *AtPfx*  | `EndPfx`: Go to *AtAtom* | `5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
+| )     | *AtAtom* | HERE!!! | `5 GenMul`<br>`4 GenAdd`<br>`1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | |
