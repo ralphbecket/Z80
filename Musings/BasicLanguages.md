@@ -522,4 +522,8 @@ To make this concrete, I present an example of how the expression `-(x + 3 * -y)
 |       | *AtAtom* | `GenAdd`: Gen `ADD` | `1 GenLPar`<br>`GenNeg`<br>`EndPfx`<br>`0 EndExpr` | `ADD` |
 | )     | *AtAtom* | If not *AtAtom* then error! <br> If 1 < ToS then set replay ')', pop, ret <br> If 0 = ToS then set replay ')', pop, ret <br> If 1 = ToS then pop, pop, ret | `EndPfx`<br>`0 EndExpr` | |
 |       | *AtAtom* | `GenNeg`: Gen `NEG`, ret | `0 EndExpr` | `NEG` |
-|       | *AtPfx*  | `EndPfx`: Go to *AtAtom* | `0 EndExpr` | |
+|       | *AtAtom* | `EndPfx`: Go to *AtAtom* | `0 EndExpr` | |
+| ...   | *AtAtom* | If *AtAtom* then set replay `...`, pop, ret<br>Else ... | | |
+|       | *AtAtom* | `EndExpr`: Pop state | | |
+
+Note, _set replay ..._ means "reprocess the most recently read token" -- in other words, do something without consuming the token.
