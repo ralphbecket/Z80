@@ -526,7 +526,7 @@ To make this concrete, I present an example of how the expression `-(x + 3 * -y)
 | ...   | *AtAtom* | If *AtAtom* then set replay `...`, pop, ret<br>Else ... | | |
 |       | *AtAtom* | `EndExpr`: Pop state | | |
 
-Note, _set replay ..._ means "reprocess the most recently read token" -- in other words, do something without consuming the token.
+Note, _set replay ..._ means "next time, reprocess the most recently read token" -- in other words, do something without consuming the token.
 
 The upshot of all the above is that from the input `-(x + 3 * -y) ...` we generate the following:
 ```
@@ -539,4 +539,15 @@ ADD
 NEG
 ```
 
-The code to implement the various tokens is simple: XXX HERE
+The code to implement the various tokens is simple:
+```
+
+
+
+...
+Context:    dw 0  // The current parser state.
+AtPfx       equ 1 // Parser states...
+AtAtom      equ 2
+...
+ReplayTok:  dw 0  // Replay this token next if non-zero.
+```
