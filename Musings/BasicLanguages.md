@@ -527,3 +527,16 @@ To make this concrete, I present an example of how the expression `-(x + 3 * -y)
 |       | *AtAtom* | `EndExpr`: Pop state | | |
 
 Note, _set replay ..._ means "reprocess the most recently read token" -- in other words, do something without consuming the token.
+
+The upshot of all the above is that from the input `-(x + 3 * -y) ...` we generate the following:
+```
+VAR x
+LIT 3
+VAR y
+NEG
+MUL
+ADD
+NEG
+```
+
+The code to implement the various tokens is simple: XXX HERE
