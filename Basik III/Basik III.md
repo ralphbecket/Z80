@@ -16,5 +16,22 @@ The previous iterations of my ideas have had various flavours.  Some abandoned f
 
 My current thoughts are that for the exercise to be meaningful, we have to have functions and procedures, and we cannot assume that all or even most data would be 16-bit quantities.  However, I am, for speed, prepared to forgo recursion: very few BASIC programmers of that era were aware of the concept, let alone comfortable with it (well, I can only think of one BASIC implementation of the day that even supported proper functions: the excellent BBC BASIC).
 
-## Basics
+## Basics (ho ho)
 
+All variables and function parameters will be statically typed (byte, int, float, string, and arrays thereof) and statically allocated (i.e., have a fixed address in memory).
+
+All functions and procedures must be defined before they are used.  Recursion is not supported (it is quite expensive to support on the Z80 and very few programmers of the day would actually use the facility).
+
+Scope: a variable and function can only be referred to iff it is defined earlier and is not local to a previously defined function.
+
+All variables and constants are passed via pointers to their values, with the exception of byte and int quantities which are passed by value.
+
+Expressions are evaluated on the stack.  Operators and functions pop arguments from the stack and push the result on to the stack.
+
+There will be no line numbers or labels and no `goto` statement.  All control flow is structured via `if-elif-else-end` and `while-continue-break-end` structures (we might reasonably consider adding a `for-end` loop) and function/procedure calls.
+
+## Source code, tokenisation, the symbol table, parsing and compiling.
+
+
+
+The compiler will be 
