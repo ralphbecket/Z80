@@ -61,6 +61,74 @@ a[2] = 2
 Isort a
 ```
 
+And how the above might be compiled (recall that we want something _simple_ to generate -- obviously hand written assember is going to be way tighter, but any kind of optimising compiler is going to be a _much_ bigger enterprise):
+```
+  jp _IsortPassEnd
+IsortPass:
+  pop DE                        ; Save return addr.
+  pop HL : ld (&i_1), HL        ; Arg 2.
+  pop HL : ld (&xs_1), HL       ; Arg 1.
+  push DE                       ; Push return addr.
+  ; this = xs[i]
+  ld HL, &xs_1 : push HL        ; xs
+  ld HL, &i_1 : push HL         ; i
+  call IntsLD                   ; xs[i]
+  pop HL : ld (&this_1), HL     ; this = xs[i]
+  ; while 0 < i
+_Loop1:
+  ld HL, 0 : push HL            ; 0
+  ld HL, (&i_1) : push HL       ; i
+  call IntLT                    ; 0 < i
+  pop HL
+  ld A, H
+  or L
+  jp z, _Loop1End
+  ; prev = xs[i - 1]
+  ld HL, &xs_1 : push HL        ; xs
+  ld HL, (&i_1) : push HL       ; i
+  ld HL, 1 : push HL            ; 1
+  call IntSub                   ; i - 1
+  call IntsLD                   ; xs[i - 1]
+  pop HL : ld (&prev_1), HL     ; prev = xs[i - 1]
+  ; if prev <= this
+_If1:
+  ld HL, (&prev_1) : push HL    ; prev
+  ld HL, (&this_1) : push HL    ; this
+  call IntLE                    ; prev <= this
+  pop HL
+  ld A, H
+  or L
+  jp z, _If1End
+  jp _Loop1End                  ; break
+_If1End
+  ; xs[i] = prev
+  ld HL, &xs_1 : push HL        ; xs
+  ld HL, (&i_1) : push HL       ; i
+  ld HL, (&prev_1) : push HL    ; prev
+  call IntsST                   ; xs[i] = prev
+  ; i = i - 1
+  ld HL, (&i_1) : push HL       ; i
+  ld HL, 1 : push HL            ; 1
+  call IntSub                   ; i - 1
+  pop HL : ld (&i_1), HL        ; i = i - 1
+  ; loop
+  jp _Loop1
+_Loop1End
+  ; xs[i] = this
+  ld HL, &xs_1 : push HL        ; xs
+  ld HL, (&i_1) : push HL       ; i
+  ld HL, (&this) : push HL      ; this
+  call IntsST                   ; xs[i] = this
+  ; end
+  ret
+_IsortPassEnd:
+jp _IsortEnd
+Isort:
+  ...
+_IsortEnd:
+...
+```
+
 ## Source code, tokenisation, the symbol table, parsing and compiling.
 
 
