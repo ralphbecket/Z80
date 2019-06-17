@@ -79,9 +79,7 @@ _Loop1:
   ld HL, 0 : push HL            ; 0
   ld HL, (&i_1) : push HL       ; i
   call IntLT                    ; 0 < i
-  pop HL
-  ld A, H
-  or L
+  pop HL : ld A, H : or L
   jp z, _Loop1End
   ; prev = xs[i - 1]
   ld HL, &xs_1 : push HL        ; xs
@@ -95,9 +93,7 @@ _If1:
   ld HL, (&prev_1) : push HL    ; prev
   ld HL, (&this_1) : push HL    ; this
   call IntLE                    ; prev <= this
-  pop HL
-  ld A, H
-  or L
+  pop HL : ld A, H : or L
   jp z, _If1End
   jp _Loop1End                  ; break
 _If1End
