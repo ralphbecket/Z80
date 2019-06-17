@@ -30,7 +30,7 @@ Expressions are evaluated on the stack.  Operators and functions pop arguments f
 
 There will be no line numbers or labels and no `goto` statement.  All control flow is structured via `if-elif-else-end` and `while-continue-break-end` structures (we might reasonably consider adding a `for-end` loop) and function/procedure calls.
 
-## Sample Source Code
+## Example source code
 
 ```
 ; Insertion sort.
@@ -61,7 +61,7 @@ a[2] = 2
 Isort a
 ```
 
-And how the above might be compiled (recall that we want something _simple_ to generate -- obviously hand written assember is going to be way tighter, but any kind of optimising compiler is going to be a _much_ bigger enterprise):
+And how the above might be compiled (I want something _simple_ that can be generated as the code is parsed, without requiring an intermediate abstract representation -- obviously hand written assember is going to be way tighter, but any kind of optimising compiler would be _much, much_ more work):
 ```
   jp _IsortPassEnd
 IsortPass:
@@ -123,6 +123,69 @@ Isort:
   ...
 _IsortEnd:
 ...
+```
+
+## Notes on compilation
+
+### Data representation
+
+|Type|Size|Convention|
+|----|----|----------|
+|byte|8-bits|Pass by value|
+|int|16-bits|Pass by value|
+|float|40-bits|Pass by reference|
+|string|16-bit length, n-bytes data|Pass by reference|
+|bytes|16-bit length, n-bytes data|Pass by reference|
+|ints|16-bit length, 2n-bytes data|Pass by reference|
+|floats|16-bit length, 5n-bytes data|Pass by reference|
+|strings|16-bit length, 2n-bytes references to strings|Pass by reference|
+
+### Expressions and operators
+
+Values are always pushed on to the stack.
+
+Examples:
+```
+  ld HL, 1234 : push HL
+  ld HL, &someFloat : push HL
+```
+
+Operators always pop data from the stack and push the result on to the stack.
+
+Example:
+```
+IntAdd:
+  pop IX      ; Return address.
+  pop HL      ; Arg 1.
+  pop DE      ; Arg 2.
+  add HL, DE
+  push HL     ; Result.
+  jp (IX)
+```
+
+### Functions
+
+Calling `f e1 e2 e3`:
+```
+  [[e1]]
+  [[e2]]
+  [[e3]]
+  call f
+```
+
+Compiling `func int f int x int y string z: ... return e end`:
+```
+  jp fEnd               ; Execution skips over function definitions.
+f:                      ; Function prologue.
+  pop DE                ; Return address.
+  pop HL : ld (&z), HL  ; Arg 3.
+  pop HL : ld (&y), HL  ; Arg 2.
+  pop HL : ld (&x), HL  ; Arg 1.
+  push DE               ; Restore return address.
+  [[...]]
+  [[e]]                 ; Return e.
+  pop HL : ex (SP), HL : jp (HL)
+fEnd:
 ```
 
 ## Source code, tokenisation, the symbol table, parsing and compiling.
