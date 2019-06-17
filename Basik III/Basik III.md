@@ -30,6 +30,37 @@ Expressions are evaluated on the stack.  Operators and functions pop arguments f
 
 There will be no line numbers or labels and no `goto` statement.  All control flow is structured via `if-elif-else-end` and `while-continue-break-end` structures (we might reasonably consider adding a `for-end` loop) and function/procedure calls.
 
+## Sample Source Code
+
+```
+; Insertion sort.
+proc IsortPass ints xs int i:
+  this = xs[i]
+  while 0 < i
+    prev = xs[i - 1]
+    if prev <= this
+      break
+    end
+    xs[i] = prev
+    i = i - 1
+  end
+  xs[i] = this
+end
+proc Isort ints xs:
+  n = len xs
+  i = 1
+  while i < n
+    IsortPass xs i
+    i = i + 1
+  end
+end
+a = NewInts 3
+a[0] = 3
+a[1] = 1
+a[2] = 2
+Isort a
+```
+
 ## Source code, tokenisation, the symbol table, parsing and compiling.
 
 
