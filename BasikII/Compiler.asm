@@ -1,8 +1,3 @@
-
-
-
-; ---- Compiler state transitions. ----
-;
 ; The grammar divides symbols into five kinds: values (constants and variables),
 ; prefix, postfix, and infix operators, and special cases.
 ;
@@ -10,6 +5,14 @@
 ;
 ;       Expr ::= Prefix* Value Postfix* [Infix Expr]
 ;
+
+DoExpr                  ld hl, (StateAndContext)
+                        push hl
+                        ld hl, CloseExpr
+                        push hl
+                        ld a, CloseExprPrec
+                        push af
+                        jp GoToAtPrefixOp
 
 DoNextSym               call NextToken
 DoCurrSym               ld a, (TokKind)
@@ -149,6 +152,11 @@ DoCloseExpr             ld a, CloseExprPrec
                         ld (InfixOpPrec), a
                         jp _DoInfixOp           ; Generate any stacked infix operators.
 
+CloseExpr               pop hl
+                        ld (StateAndContext), hl
+                        ; XXX Also need to tell the tokeniser to replay the last token.
+                        ret
+
 ; ---- Error reporting. ----
 
 Error                   halt                    ; XXX Fill this in!
@@ -164,6 +172,8 @@ CloseExprPrec           equ 0
 RParPrec                equ 1
 LParPrec                equ 2
 
+StateAndContext         equ *
+Context                 db 0                    ; NYI
 State                   db 0
 
 InfixOpPrec             db 0

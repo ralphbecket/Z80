@@ -80,6 +80,10 @@ pmLoop                  ld a, (hl)              ; Obviously, this could be faste
                         cp 'd'
                         jr z, pmCageNE
 
+                        ; Pac Man.
+                        cp 'C'
+                        jp z, pmPacManR
+
 pmSpace                 ld a, BlackInk + BlackPaper + Flash
                         ld (de), a
                         jr pmNextCol
@@ -167,6 +171,8 @@ pmNextRow               ld bc, MazeWidth - 32
                         ld sp, (SavedSP)
                         ret
 
+pmPacManR               jp pmSpace ; XXX HERE!
+
 MazeWidth               equ 64
 MazeHeight              equ 57
 MazeViewRow             db 16
@@ -217,10 +223,10 @@ Maze                    equ *
     db "# . 3###2 # . 3#######4 . 3#4 . 3#######4 . # 1###4 . #         "
     db "#       # #                                 # #       #         "
     db "# O . . # # . . . . . . .     . . . . . . . # # . . O #         "
-    db "#       # #                                 # #       #         "
-    db "####2 . # # . 1#2 . 1#############2 . 1#2 . # # . 1####         "
-    db "#   #   # #   # #   #             #   # #   # #   #   #         "
-    db "####4 . 3#4 . # # . 3###### ######4 . # # . 3#4 . 3####         "
+    db "#       # #                 C               # #       #         "
+    db "3###2 . # # . 1#2 . 1#############2 . 1#2 . # # . 1###4         "
+    db "    #   # #   # #   #             #   # #   # #   #             "
+    db "1###4 . 3#4 . # # . 3###### ######4 . # # . 3#4 . 3###2         "
     db "#             # #         # #         # #             #         "
     db "# . . . . . . # # . . . . # # . . . . # # . . . . . . #         "
     db "#             # #         # #         # #             #         "
