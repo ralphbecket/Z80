@@ -1,0 +1,9 @@
+- HEAP var in runtime
+  DONE - Add HEAP sym entry label in generator script
+  - Add HEAP var allocation to compilation coda
+- Check the set-up part
+  DONE - Init state
+  * Added InitialObjStart and InitialSymEnd.
+  - Preserve the stack pointer & set the compiler stack and heap to the display
+- Compilation coda should restore the original stack pointer
+- Errors should print the line number and column and return $DEAD

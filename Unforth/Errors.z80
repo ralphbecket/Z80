@@ -1,0 +1,53 @@
+; Error reporting.
+
+Error: proc
+    pop HL ; This is the first byte of the null terminated error message.
+    push AF ; Save A.
+    call RT_PutS
+    call ReportTokenAndLine
+    halt ; Zeus gets a bit enthusiastic.
+    halt
+    halt
+Fail: jr Fail ; ERROR!
+endp
+
+ReportTokenAndLine: proc
+    ld L, (IX + SymSrcLo)
+    ld H, (IX + SymSrcHi)
+    ld B, (IX + SymLen)
+    ld A, 13
+    rst $10
+    ld A, '"'
+    rst $10
+Loop:
+    ld A, (HL)
+    inc HL
+    rst $10
+    djnz Loop
+    ld A, '"'
+    rst $10
+    ld A, ' '
+    rst $10
+    ret
+endp
+
+
+EError: macro(what)
+    call Error
+    noflow ; Turn off mixed code and data warnings.
+EMsg:                   db what, 0
+endm
+
+
+ENYI:                   EError("not yet implemented")
+EUnexpectedEof:         EError("unexpected end of file")
+EBadEscapeSequence:     EError("bad escape sequence")
+ENotALabel:             EError("not a label")
+EExpectedValue:         EError("expected value")
+EExpectedNew:           EError("expected new name")
+EExpectedNewOrFwd:      EError("expected new name or label")
+EExpectedVarFnOrLabel:  EError("expected var, fn, or label")
+EExpectedLBrace:        EError("expected '{'")
+EFnSyntaxError:         EError("expected '{', ',', or new name")
+EUnmatchedParens:       EError("unmatched parenthesis")
+EUnresolvedLabel:       EError("unresolved label")

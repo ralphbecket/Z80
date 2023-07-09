@@ -1,0 +1,35 @@
+DEBUG equ 0
+
+if DEBUG
+    DebugLog: proc
+        exx
+        ex AF, AF'
+        ld A, 2
+        call $1601 ; Open channel 2.
+        pop HL
+    Lp: ld A, (HL)
+        inc HL
+        and A
+        jr z, Dn
+        rst $10
+        jr Lp
+    Dn: ld A, ' ' ; Add a space.
+        rst $10
+        push HL
+        ex AF, AF'
+        exx
+        halt
+        halt ; Let the emulator show what's on the screen.
+        ret
+    endp
+
+    Log: macro(msg)
+        call DebugLog
+        noflow
+        db msg, 0
+    endm
+else
+    Log: macro(msg)
+    endm
+endif
+

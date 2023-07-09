@@ -1,0 +1,174 @@
+NumBuiltins equ 56
+BuiltinsHashList: db $02, $07, $0e, $21, $26, $28, $29, $29, $2a, $2b, $2b, $2c, $2c, $2d, $2d, $2e, $2f, $34, $35, $35, $37, $3a, $40, $40, $41, $5c, $5e, $79, $7b, $7d, $86, $90, $98, $a0, $a4, $a5, $ae, $af, $b1, $b4, $ba, $ba, $d8, $d8, $d8, $e1, $e1, $e4, $e7, $e9, $ea, $ec, $ee, $f0, $f6, $f7
+Builtins: ; Built-ins symbol table.
+    db $02, 6 : dw NamePutSPC           : db SymPostfix : dw TpltPutSPC
+    db $07, 6 : dw NamePutSNL           : db SymPostfix : dw TpltPutSNL
+    db $0e, 3 : dw NamePop              : db SymPostfix : dw TpltPop
+    db $21, 1 : dw NameNot              : db SymPostfix : dw TpltNot
+    db $26, 1 : dw NameAmpersand        : db SymAmpersand : dw TpltAmpersand
+    db $28, 1 : dw NameLPar             : db SymLPar    : dw TpltLPar
+HEAPSymEntry:
+    db $29, 4 : dw NameHEAP             : db SymVar     : dw TpltHEAP
+    db $29, 1 : dw NameRPar             : db SymRPar    : dw TpltRPar
+    db $2a, 1 : dw NameMul              : db SymInfix   : dw TpltMul
+    db $2b, 1 : dw NameAdd              : db SymInfix   : dw TpltAdd
+    db $2b, 4 : dw NameLddr             : db SymPostfix : dw TpltLddr
+    db $2c, 1 : dw NameComma            : db SymComma   : dw TpltComma
+    db $2c, 1 : dw NamePush             : db SymComma   : dw TpltPush
+    db $2d, 4 : dw NameIfLT             : db SymIfLT    : dw TpltIfLT
+    db $2d, 1 : dw NameSub              : db SymInfix   : dw TpltSub
+    db $2e, 1 : dw NameField            : db SymInfix   : dw TpltField
+    db $2f, 1 : dw NameSDiv             : db SymInfix   : dw TpltSDiv
+    db $34, 3 : dw NameInc1             : db SymPostfix : dw TpltInc1
+    db $35, 3 : dw NameInc2             : db SymPostfix : dw TpltInc2
+    db $35, 4 : dw NameLdir             : db SymPostfix : dw TpltLdir
+    db $37, 4 : dw NameIfNZ             : db SymIfNZ    : dw TpltIfNZ
+    db $3a, 1 : dw NameLabel            : db SymColon   : dw TpltLabel
+    db $40, 3 : dw NameDec1             : db SymPostfix : dw TpltDec1
+    db $40, 1 : dw NameDeref            : db SymPostfix : dw TpltDeref
+    db $41, 3 : dw NameDec2             : db SymPostfix : dw TpltDec2
+    db $5c, 1 : dw NameLambda           : db SymLambda  : dw TpltLambda
+    db $5e, 1 : dw NameXor              : db SymInfix   : dw TpltXor
+    db $79, 3 : dw NameWrByte           : db SymInfix   : dw TpltWrByte
+    db $7b, 1 : dw NameLBrace           : db SymLBrace  : dw TpltLBrace
+    db $7d, 1 : dw NameRBrace           : db SymRBrace  : dw TpltRBrace
+    db $86, 2 : dw NameDouble           : db SymPostfix : dw TpltDouble
+    db $90, 2 : dw NameHalve            : db SymPostfix : dw TpltHalve
+    db $98, 2 : dw NameAssign           : db SymAssign  : dw TpltAssign
+    db $a0, 4 : dw NamePutD             : db SymPostfix : dw TpltPutD
+    db $a4, 4 : dw NameOutP             : db SymInfix   : dw TpltOutP
+    db $a5, 2 : dw NameWrWord           : db SymInfix   : dw TpltWrWord
+    db $ae, 2 : dw NameDerefB           : db SymPostfix : dw TpltDerefB
+    db $af, 4 : dw NamePutS             : db SymPostfix : dw TpltPutS
+    db $b1, 4 : dw NamePutU             : db SymPostfix : dw TpltPutU
+    db $b4, 2 : dw NameLShift           : db SymPostfix : dw TpltLShift
+    db $ba, 2 : dw NameAnd              : db SymInfix   : dw TpltAnd
+    db $ba, 2 : dw NameRShift           : db SymPostfix : dw TpltRShift
+    db $d8, 3 : dw NameCpl              : db SymPostfix : dw TpltCpl
+    db $d8, 3 : dw NameLShiftO          : db SymPostfix : dw TpltLShiftO
+    db $d8, 3 : dw NameUDiv             : db SymInfix   : dw TpltUDiv
+    db $e1, 4 : dw NameCall             : db SymPostfix : dw TpltCall
+    db $e1, 5 : dw NamePutXx            : db SymPostfix : dw TpltPutXx
+    db $e4, 3 : dw NameRShiftO          : db SymPostfix : dw TpltRShiftO
+    db $e7, 2 : dw NameOr               : db SymInfix   : dw TpltOr
+    db $e9, 3 : dw NameNeg              : db SymPostfix : dw TpltNeg
+    db $ea, 3 : dw NameIfZ              : db SymIfZ     : dw TpltIfZ
+    db $ec, 5 : dw NameWords            : db SymPostfix : dw TpltWords
+    db $ee, 7 : dw NamePutXxxx          : db SymPostfix : dw TpltPutXxxx
+    db $f0, 3 : dw NameInP              : db SymPostfix : dw TpltInP
+    db $f6, 3 : dw NameMod              : db SymInfix   : dw TpltMod
+    db $f7, 5 : dw NameBytes            : db SymPostfix : dw TpltBytes
+BuiltinsTop:
+    db 0 ; End of built-ins symbol table.
+NamePutSPC:         db "putspc"
+NamePutSNL:         db "putsnl"
+NamePop:            db "pop"
+NameNot:            db "!"
+NameAmpersand:      db "&"
+NameLPar:           db "("
+NameHEAP:           db "HEAP"
+NameRPar:           db ")"
+NameMul:            db "*"
+NameAdd:            db "+"
+NameLddr:           db "lddr"
+NameComma:          db ","
+NamePush:           db ","
+NameIfLT:           db "iflt"
+NameSub:            db "-"
+NameField:          db "."
+NameSDiv:           db "/"
+NameInc1:           db "++1"
+NameInc2:           db "++2"
+NameLdir:           db "ldir"
+NameIfNZ:           db "ifnz"
+NameLabel:          db ":"
+NameDec1:           db "--1"
+NameDeref:          db "@"
+NameDec2:           db "--2"
+NameLambda:         db "\\"
+NameXor:            db "^"
+NameWrByte:         db "<-."
+NameLBrace:         db "{"
+NameRBrace:         db "}"
+NameDouble:         db "*2"
+NameHalve:          db "/2"
+NameAssign:         db "->"
+NamePutD:           db "putd"
+NameOutP:           db "outp"
+NameWrWord:         db "<-"
+NameDerefB:         db "@."
+NamePutS:           db "puts"
+NamePutU:           db "putu"
+NameLShift:         db "<<"
+NameAnd:            db "/\\"
+NameRShift:         db ">>"
+NameCpl:            db "cpl"
+NameLShiftO:        db "<<o"
+NameUDiv:           db "div"
+NameCall:           db "call"
+NamePutXx:          db "putxx"
+NameRShiftO:        db ">>o"
+NameOr:             db "\\/"
+NameNeg:            db "neg"
+NameIfZ:            db "ifz"
+NameWords:          db "words"
+NamePutXxxx:        db "putxxxx"
+NameInP:            db "inp"
+NameMod:            db "mod"
+NameBytes:          db "bytes"
+TpltPutSPC:         CodeGenTemplate({ld A, ' ' : rst $10})
+TpltPutSNL:         CodeGenTemplate({call RT_PutSNL})
+TpltPop:            CodeGenTemplate({pop HL})
+TpltNot:            CodeGenTemplate({ld A, L : or H : ld HL, 0 : jr nz, End : inc L : End:})
+TpltAmpersand:      CodeGenTemplate({/* address of */})
+TpltLPar:           CodeGenTemplate({/* lpar */})
+TpltHEAP:           CodeGenTemplate({/* RT_HEAP */})
+TpltRPar:           CodeGenTemplate({/* rpar */})
+TpltMul:            CodeGenTemplate({call RT_Mul})
+TpltAdd:            CodeGenTemplate({add HL, DE})
+TpltLddr:           CodeGenTemplate({ex DE, HL : pop BC : pop HL : lddr})
+TpltComma:          CodeGenTemplate({push HL})
+TpltPush:           CodeGenTemplate({push HL})
+TpltIfLT:           CodeGenTemplate({/* test and jp nz */})
+TpltSub:            CodeGenTemplate({ex DE, HL : xor A : sbc HL, DE})
+TpltField:          CodeGenTemplate({add HL, HL : add HL, DE})
+TpltSDiv:           CodeGenTemplate({call RT_SDiv})
+TpltInc1:           CodeGenTemplate({inc HL})
+TpltInc2:           CodeGenTemplate({inc HL : inc HL})
+TpltLdir:           CodeGenTemplate({ex DE, HL : pop BC : pop HL : ldir})
+TpltIfNZ:           CodeGenTemplate({/* test and jp nz */})
+TpltLabel:          CodeGenTemplate({/* def label */})
+TpltDec1:           CodeGenTemplate({dec HL})
+TpltDeref:          CodeGenTemplate({ld A, (HL) : inc HL : ld H, (HL) : ld L, A})
+TpltDec2:           CodeGenTemplate({dec HL : dec HL})
+TpltLambda:         CodeGenTemplate({/* lambda */})
+TpltXor:            CodeGenTemplate({ld A, L : xor E : ld L, A : ld A, H : xor D : ld H, A})
+TpltWrByte:         CodeGenTemplate({ex DE, HL : ld (HL), E : inc HL})
+TpltLBrace:         CodeGenTemplate({/* lbrace */})
+TpltRBrace:         CodeGenTemplate({/* rbrace */})
+TpltDouble:         CodeGenTemplate({add HL, HL})
+TpltHalve:          CodeGenTemplate({sra H : rrl})
+TpltAssign:         CodeGenTemplate({/* assign */})
+TpltPutD:           CodeGenTemplate({call RT_PutD})
+TpltOutP:           CodeGenTemplate({ld C, E : out (C), L})
+TpltWrWord:         CodeGenTemplate({ex DE, HL : ld (HL), E : inc HL : ld (HL), D : inc HL})
+TpltDerefB:         CodeGenTemplate({ld L, (HL) : ld H, 0})
+TpltPutS:           CodeGenTemplate({call RT_PutS})
+TpltPutU:           CodeGenTemplate({call RT_PutU})
+TpltLShift:         CodeGenTemplate({add HL, HL})
+TpltAnd:            CodeGenTemplate({ld A, L : and E : ld L, A : ld A, H : and D : ld H, A})
+TpltRShift:         CodeGenTemplate({srl H : rr L})
+TpltCpl:            CodeGenTemplate({ld A, L : cpl : ld L, A : ld A, H : cpl : ld H, A})
+TpltLShiftO:        CodeGenTemplate({ld A, H : rlca : adc HL, HL})
+TpltUDiv:           CodeGenTemplate({call RT_UDiv})
+TpltCall:           CodeGenTemplate({call RT_Call})
+TpltPutXx:          CodeGenTemplate({call RT_PutXx})
+TpltRShiftO:        CodeGenTemplate({ld A, L : rrca : rr H : rr L})
+TpltOr:             CodeGenTemplate({ld A, L : or E : ld L, A : ld A, H : or D : ld H, A})
+TpltNeg:            CodeGenTemplate({xor A : sub L : ld L, A : sbc A, A : sub H : ld H, A})
+TpltIfZ:            CodeGenTemplate({/* test and jp z */})
+TpltWords:          CodeGenTemplate({call RT_AllocWords})
+TpltPutXxxx:        CodeGenTemplate({call RT_PutXxxx})
+TpltInP:            CodeGenTemplate({ld C, L : in L, (C) : ld H, 0})
+TpltMod:            CodeGenTemplate({call RT_UDiv : ex DE, HL})
+TpltBytes:          CodeGenTemplate({call RT_AllocBytes})

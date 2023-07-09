@@ -1,0 +1,127 @@
+; Op-codes for various Z80 instructions.
+
+OpLdHLImmediate:        equ $21
+OpLdHLIndirect:         equ $2a
+OpStHL:                 equ $22
+OpExDEHL:               equ $eb
+OpPopHL:                equ $e1
+OpPushHL:               equ $e5
+OpJp:                   equ $c3
+OpJpZ:                  equ $ca
+OpJpNZ:                 equ $c2
+OpCall:                 equ $cd
+OpRet:                  equ $c9
+OpPopDE:                equ $d1
+OpPushDE:               equ $d5
+
+; Generate a call to a run-time function (in BC).
+GenCallBC: proc
+    ld HL, (Obj)
+    ld (HL), $cd ; call nn
+    inc HL
+    ld (HL), C
+    inc HL
+    ld (HL), B
+    inc HL
+    ld (Obj), HL
+    ret
+endp
+
+; Generate a one-byte op code (in A).
+GenA: proc
+    ld HL, (Obj)
+    ld (HL), A
+    inc HL
+    ld (Obj), HL
+    ret
+endp
+
+; Generate a one-byte op code (in A) followed by (IX+SymLo/SymHi),
+; this is, for a value known to the compiler at this point.
+GenAKnown: proc
+    ld HL, (Obj)
+    ld (HL), A
+    inc HL
+    ld A, (IX + SymLo)
+    ld (HL), A
+    ld A, (IX + SymHi)
+    inc HL
+    ld (HL), A
+    inc HL
+    ld (Obj), HL
+    ret
+endp
+
+; Generate a one-byte op code (in A) followed by (IX+SymLo/SymHi)
+; overwriting the latter with the address of the object code value
+; (this allows us to chain as-yet unknown values through the object
+; code to be filled in once they are known).
+GenAUnknown: proc
+    ld HL, (Obj)
+    ld (HL), A
+    inc HL
+    ld A, (IX + SymLo)
+    ld (IX + SymLo), L
+    ld (HL), A
+    ld A, (IX + SymHi)
+    ld (IX + SymHi), H
+    inc HL
+    ld (HL), A
+    inc HL
+    ld (Obj), HL
+    ret
+endp
+
+; Generate code from a template pointed to by (IX+SymLo/SymHi)
+; where the first byte is the number of bytes to copy and the
+; remainder are the bytes to be copied.
+
+GenIXTemplate: proc
+    ld L, (IX + SymLo)
+    ld H, (IX + SymHi)
+::GenHLTemplate: ; This is visible globally as GenHLTemplate.
+    ld A, (HL)
+    and A
+    ret z
+    ld C, A
+    ld B, 0
+    inc HL
+    ld DE, (Obj)
+    ldir
+    ld (Obj), DE
+    ret
+endp
+
+; This is called with the length and code to
+; be copied immediately following the call.
+; For example:
+;
+;   ; Gen logical negation.
+;   call GenInlineTemplate
+;       db 8
+;       ; The next 8 bytes are copied into the generated object code.
+;       ld A, L
+;       or H
+;       ld HL, 0
+;       jr nz, 1
+;       inc L
+;   ... ; GenInline returns to this point after the inline template.
+GenInlineTemplate: proc
+    pop HL
+    ld B, 0
+    ld C, (HL)
+    inc HL
+    ld DE, (Obj)
+    ldir
+    ld (Obj), DE
+    jp (HL)
+endp
+
+CodeGenTemplate: macro(body)
+    noflow
+    db End-Start
+Start:
+    body
+End:
+endm
+

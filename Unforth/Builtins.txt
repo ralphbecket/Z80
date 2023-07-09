@@ -1,0 +1,57 @@
+# Name Symbol Kind Code
+Add     +       Infix       add HL, DE
+Ampersand &     Ampersand   /* address of */
+And     /\      Infix       ld A, L : and E : ld L, A : ld A, H : and D : ld H, A
+Assign  ->      Assign      /* assign */
+Bytes   bytes   Postfix     call RT_AllocBytes
+Call    call    Postfix     call RT_Call
+Comma   ,       Comma       push HL
+Cpl     cpl     Postfix     ld A, L : cpl : ld L, A : ld A, H : cpl : ld H, A
+Dec1    --1     Postfix     dec HL
+Dec2    --2     Postfix     dec HL : dec HL
+Deref   @       Postfix     ld A, (HL) : inc HL : ld H, (HL) : ld L, A
+DerefB  @.      Postfix     ld L, (HL) : ld H, 0
+Double  *2      Postfix     add HL, HL
+Field   .       Infix       add HL, HL : add HL, DE
+Halve   /2      Postfix     sra H : rrl
+HEAP    HEAP    Var         /* RT_HEAP */
+IfLT    iflt    IfLT        /* test and jp nz */
+IfNZ    ifnz    IfNZ        /* test and jp nz */
+IfZ     ifz     IfZ         /* test and jp z */
+Inc1    ++1     Postfix     inc HL
+Inc2    ++2     Postfix     inc HL : inc HL
+InP     inp     Postfix     ld C, L : in L, (C) : ld H, 0
+Label   :       Colon       /* def label */
+Lambda  \       Lambda      /* lambda */
+LBrace  {       LBrace      /* lbrace */
+Lddr    lddr    Postfix     ex DE, HL : pop BC : pop HL : lddr
+Ldir    ldir    Postfix     ex DE, HL : pop BC : pop HL : ldir
+LPar    (       LPar        /* lpar */
+LShift  <<      Postfix     add HL, HL
+LShiftO <<o     Postfix     ld A, H : rlca : adc HL, HL
+Mul     *       Infix       call RT_Mul
+Neg     neg     Postfix     xor A : sub L : ld L, A : sbc A, A : sub H : ld H, A
+Not     !       Postfix     ld A, L : or H : ld HL, 0 : jr nz, End : inc L : End:
+Or      \/      Infix       ld A, L : or E : ld L, A : ld A, H : or D : ld H, A
+OutP    outp    Infix       ld C, E : out (C), L
+Pop     pop     Postfix     pop HL
+Push    ,       Comma       push HL
+PutD    putd    Postfix     call RT_PutD
+PutSPC  putspc  Postfix     ld A, ' ' : rst $10
+PutS    puts    Postfix     call RT_PutS
+PutSNL  putsnl  Postfix     call RT_PutSNL
+PutU    putu    Postfix     call RT_PutU
+PutXx   putxx   Postfix     call RT_PutXx
+PutXxxx putxxxx Postfix     call RT_PutXxxx
+RBrace  }       RBrace      /* rbrace */
+Mod     mod     Infix       call RT_UDiv : ex DE, HL
+RPar    )       RPar        /* rpar */
+RShift  >>      Postfix     srl H : rr L
+RShiftO >>o     Postfix     ld A, L : rrca : rr H : rr L
+Sub     -       Infix       ex DE, HL : xor A : sbc HL, DE
+SDiv    /       Infix       call RT_SDiv
+UDiv    div     Infix       call RT_UDiv
+WrWord  <-      Infix       ex DE, HL : ld (HL), E : inc HL : ld (HL), D : inc HL
+WrByte  <-.     Infix       ex DE, HL : ld (HL), E : inc HL
+Words   words   Postfix     call RT_AllocWords
+Xor     ^       Infix       ld A, L : xor E : ld L, A : ld A, H : xor D : ld H, A

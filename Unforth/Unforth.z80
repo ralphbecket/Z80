@@ -1,0 +1,38 @@
+/*
+
+Unforth
+Ralph Becket
+2021
+
+Unforth is my response to Forth on the Z80 (specifically the ZX Spectrum).
+Forth is incredibly slow on the old Z80 and, to my eyes, quite unreadable.
+
+Unforth has the following goals:
+- be small enough that one could imagine boot-strapping it in a 1980s
+  BASIC interpreter;
+- be fast enough that its within about a factor of two of hand-crafted
+  machine code (Forth is many times slower on the Z80);
+- be reasonably comfortable to write -- much more so than Forth or
+  Z80 assembly language.
+
+This is written for Simon Brattel's most excellent Zeus assembler
+(www.desdes.com).
+
+*/
+
+UnforthStart equ $
+include "Constants.z80"
+include "Compiler.z80"
+include "CodeGen.z80"
+include "Tokens.z80"
+include "Symbols.z80"
+include "Errors.z80"
+include "Builtins.z80"
+include "Runtime.z80"
+include "State.z80"
+include "TODO.z80"
+include "Log.z80"
+UnforthEnd equ $
+
+AppLength equ UnforthEnd - UnforthStart
+zeusprint "Unforth: ", AppLength, "bytes"

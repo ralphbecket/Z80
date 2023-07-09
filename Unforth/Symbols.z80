@@ -1,0 +1,296 @@
+
+
+
+; The symbol table is a structure that grows downwards in memory as an
+; array of entries.  The end of the list is identified by its entry
+; having a hash of zero.
+;
+; ... [entry][entry][entry]0
+;
+; The tables are searched in a linear fashion starting from the lowest
+; address (the most recent entry).  Each token has a hash and a length.
+; A string comparison is only made during searching if both the hash
+; and the length match those of the target symbol.
+
+; Note that there are two symbol tables: one for the built-ins, one
+; for the program being compiled.
+
+; Symbol table entry structure offsets.
+; Note that this entry order is important!
+struct
+    SymHash:        ds 1        ; A byte used to quickly search the array.
+    SymLen:         ds 1        ; A byte showing the length of the symbol.
+    SymSrcLo:       ds 1        ; The address in the source code of the symbol.
+    SymSrcHi:       ds 1        ;
+    SymKind:        ds 1        ; A byte indicating the kind of entry.
+    SymLo:          ds 1        ; The low-byte of the symbol value.
+    SymHi:          ds 1        ; The high-byte of the symbol value.
+    SymData:        equ SymLo
+    SymEntrySize:   ds 0        ; The size in bytes of a symbol table entry.
+send
+
+; Symbol kinds (I'm abusing Zeus' struct directive to make an enumeration).
+; IF YOU CHANGE THIS, YOU MUST CHANGE CompileKindTable IN Compiler.asm.
+struct
+    SymEof:         ds 1        ; EOF fittingly has kind 0.
+    SymNew:         ds 1
+    SymConst:       ds 1
+    SymStr:         ds 1
+    SymVar:         ds 1
+    SymVarAddr:     ds 1
+    SymBwd:         ds 1        ; A backward label reference (i.e., it is known).
+    SymBwdAddr:     ds 1
+    SymFwd:         ds 1        ; A forward label reference (i.e., it is not yet known).
+    SymFwdAddr:     ds 1
+    SymFn:          ds 1        ; Functions must be defined before use (i.e., they are known).
+    SymFnAddr:      ds 1
+    SymAssign:      ds 1
+    SymPostfix:     ds 1        ; A built-in operator with no follow-on argument.
+    SymInfix:       ds 1        ; A built-in operator with a follow-on argument.
+    SymIfZ:         ds 1
+    SymIfNZ:        ds 1
+    SymIfLT:        ds 1
+    SymColon:       ds 1        ; :
+    SymLambda:      ds 1        ; \
+    SymComma:       ds 1        ; ,
+    SymLBrace:      ds 1        ; {
+    SymRBrace:      ds 1        ; }
+    SymLPar:        ds 1        ; (
+    SymRPar:        ds 1        ; )
+    SymAmpersand:   ds 1        ; &
+send
+
+NextSymbol: proc
+    call NextToken
+    jp LookupSymbol
+endp
+
+; Find a match, if any, in a symbol table array for the
+; token in the symbol entry in IX.  The builtins table is
+; examined first, then the program symbol table.
+;
+; If there is no match, an attempt is made to parse the token
+; as a constant (decimal or hexadecimal or string).
+;
+; Failing that, we add a new entry to the bottom of the symbol
+; table.
+;
+; On exit, IX is set to the correct entry and A holds (IX + SymKind).
+LookupSymbol: proc
+    ; If this is a string or EOF, we don't need to do anything.
+    ld A, (IX + SymKind)
+    cp SymStr
+    ret z
+    cp SymEof
+    ret z
+    ; First try the builtins.
+    call SearchBuiltinSymbols
+    ret c
+    ; Next try the program symbols.
+    ld HL, (SymBot)
+    call SearchProgSymbols
+    ret c
+    ; Okay, let's see if this sucker is a constant.
+    ld L, (IX + SymSrcLo)
+    ld H, (IX + SymSrcHi)
+    call ParseConst
+    jr nc, IsNew
+IsConst:
+    ld (IX + SymLo), L
+    ld (IX + SymHi), H
+    ld A, SymConst
+    ld (IX + SymKind), A
+    ret
+IsNew:
+    ; This is a new symbol entry.  Zero the value and set the kind.
+    xor A
+    ld (IX + SymLo), A
+    ld (IX + SymHi), A
+    ld A, SymNew
+    ld (IX + SymKind), A
+    ; Add this entry to the bottom of the symbol table.
+    ld HL, (SymBot)
+    ld DE, -SymEntrySize
+    add HL, DE
+    ld (SymBot), HL
+    ret
+endp
+
+; Look for a match in the builtins symbol array for the
+; token in the symbol entry in IX.
+;
+; On entry:
+; - IX points to the entry to search for.
+;
+; On success:
+; - the carry flag is set,
+; - IX is set to the correct entry,
+; - and A holds the SymKind of the matched entry.
+;
+; On failure:
+; - the carry flag is clear.
+;
+; Trashes ABCDEHL.
+;
+; Note that the builtins are pre-indexed by a list of hashes
+; in non-decreasing order followed by an array of symbol
+; entries that are in the same order.  This allows
+; for fast lookups (we expect the builtins to be the most
+; frequently used program symbols), indexing into
+
+SearchBuiltinSymbols: proc
+    and A ; Clear the carry flag.
+    ld A, (IX + SymHash)
+    ld HL, BuiltinsHashList
+    ld E, L
+    ld D, H
+    ld BC, NumBuiltins
+    cpir
+    ret nz ; No match (carry flag is clear).
+    ; We have a match.  We need to find the first entry with
+    ; the given hash and start matching from there.
+    if SymEntrySize != 7
+        zeuserror "SymEntrySize is not 7 -- fix this code!"
+    endif
+    dec HL
+    xor A
+    sbc HL, DE
+    ld E, L
+    ld D, A
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    sbc HL, DE
+    ld DE, Builtins
+    add HL, DE
+    ; HL is the first entry with a matching hash.
+Loop:
+    call CompareEntries
+    scf
+    ret z ; Success (carry flag is set).
+    ; Look at the next entry if it also has a matching hash.
+    ld DE, SymEntrySize
+    add HL, DE
+    ld A, (IX + SymHash)
+    cp (HL)
+    jr z, Loop
+    and A
+    ret ; No match (carry flag is clear).
+endp
+
+; Look for a match in the program symbol table.
+;
+; On entry:
+; - IX points to the entry to search for;
+; - HL points to the first *free* entry in the program symbol table
+; (which must be terminated by a zero byte).
+;
+; On success:
+; - the carry flag is set;
+; - IX is set to the correct entry;
+; - and A holds the SymKind of the matched entry.
+;
+; On failure:
+; - the carry flag is clear.
+;
+; Note that symbol table arrays grow forwards in memory,
+; terminated by a zero byte.
+;
+; Trashes ABCDEHL.
+;
+SearchProgSymbols: proc
+Loop:
+    ld DE, SymEntrySize
+    add HL, DE ; Advance to the next entry.
+    ; (HL) is &Entry.SymHash
+    ld A, (HL) ; (HL + SymHash)
+    and A ; Clear the carry flag and test for zero.
+    ret z ; No match found (carry flag is clear).
+    call CompareEntries
+    scf ; Set the carry flag in case this is a match.
+    ret z ; Success!  (Carry flag is set).
+EntriesDontMatch:
+    jr Loop
+endp
+
+; Compare the entries pointed to by HL and IX
+; to see if they match.
+;
+; On success:
+; - the zero flag is set if the two match,
+; - IX points to the matching entry (i.e., the given HL),
+; - A holds (IX + SymKind).
+;
+; On failure:
+; - the zero flag is clear.
+; - HL is unaffected.
+;
+; Trashes BCDEHL.
+;
+CompareEntries: proc
+    ld A, (IX + SymHash)
+    ; HL is &Entry.SymHash
+    cp (HL)
+    ret nz ; Not a match (zero flag is clear).
+HashesMatch:
+    inc HL
+    ld A, (IX + SymLen)
+    ; HL is &Entry.SymLen
+    cp (HL)
+    jr z, LengthsMatch
+    ; Try the next entry.
+    dec HL ; Restore HL.
+    ret ; Not a match (zero flag is clear).
+LengthsMatch:
+    ; At this point we need to do a strncmp to see if we match.
+    ld B, A ; B is token length.
+    push HL ; Save the entry pointer.
+    inc HL
+    ; HL is &Entry.SymSrcLo
+    ld A, (HL)
+    inc HL
+    ; HL is &Entry.SymSrcHi
+    ld H, (HL)
+    ld L, A
+    ; HL points to entry token in the source code.
+    ld E, (IX + SymSrcLo)
+    ld D, (IX + SymSrcHi)
+    ; DE points to search token in the source code.
+Strncmp:
+    ld A, (DE)
+    cp (HL)
+    jr nz, StringsDiffer
+    inc DE
+    inc HL
+    djnz Strncmp
+StringsMatch:
+    pop IX
+    dec IX
+    ; IX now points to the matching symbol table entry.
+    ld A, (IX + SymKind) ; This is a courtesy to the caller.
+    ret ; Success (zero flag is set).
+StringsDiffer:
+    ; Restore HL.
+    pop HL
+    dec HL
+    ret ; Not a match (zero flag is clear).
+endp
+
+; Include the next program symbol table entry (we assume
+; this entry has been fully filled in at this point!).
+SaveNewSymbol: proc
+    ; XXX NYI!
+endp
+
+; Obscure the function symbol in IX by changing its hash.
+; Recall that a hash value of zero is special and marks the end of the table!
+HideSymbol: proc
+    ld A, (IX + SymHash)
+    neg
+    ld (IX + SymHash), A
+    ret
+endp
+
+; Reveal the obscured function symbol in IX by changing its hash back.
+RevealSymbol: equ HideSymbol ; It is its own inverse!
+

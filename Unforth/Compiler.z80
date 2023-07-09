@@ -1,0 +1,701 @@
+
+CompileProgram:
+    ld (SavedSP), SP
+    ld HL, (InitialObjStart)
+    ld (ObjStart), HL
+    ld (Obj), HL
+    ld HL, (SrcStart)
+    ld (Src), HL
+    ld HL, (InitialSymEnd)
+    ld (SymEnd), HL
+     ld (HL), 0 ; A zero hash is the end-of-list sentinel.
+    ld DE, -SymEntrySize
+    add HL, DE
+    ld (SymBot), HL ; This is the first *free* entry in the table.
+    ld HL, 0
+    ld (PendingInfix), HL
+    ld (NestingDepths), HL
+    ld (HEAPSymEntry + SymData), HL
+    ; Turn "off" the "scroll?" query.
+    ld HL, 23692
+    ld (HL), 255
+CompileNext:
+    call NextSymbol
+CompileSymbol:
+    ; Lookup and jump to the handler for this symbol kind.
+    ld HL, CompileKindTable
+    add A, A
+    add A, L
+    ld L, A
+    adc A, H
+    sub A, L
+    ld H, A
+    ld A, (HL)
+    inc HL
+    ld H, (HL)
+    ld L, A
+    jp (HL)
+
+GenAnyPendingInfixAndCompileNext: proc
+    ld HL, (PendingInfix)
+    ld A, L
+    or H
+    jp z, CompileNext
+    ;Log("Infix")
+    call GenHLTemplate ; Generate the deferred infix operator.
+    ld HL, 0
+    ld (PendingInfix), HL ; Clear the pending infix operator.
+    jp CompileNext
+endp
+
+RequireNoPendingInfixOrParens: proc
+    ld A, (PnNestingDepth)
+    or A
+    jp nz, EUnmatchedParens
+endp
+
+RequireNoPendingInfix: proc
+    ; Report an error if we have a pending infix operator.
+    ld HL, (PendingInfix)
+    ld A, L
+    or H
+    jp nz, EExpectedValue
+    ret
+endp
+
+CompileEof: proc
+    ; Check we have no pending infix functions.
+    call RequireNoPendingInfixOrParens
+    ; Check we have no function nesting.
+    ld HL, (NestingDepths)
+    ld A, L
+    or H
+    jp nz, EUnexpectedEof
+    ; Generate the final ret (ld BC, HL first for BASIC).
+    ld A, OpRet
+    call GenA
+    ; Check there are no unresolved forward references.
+    ; Assign each variable a location at the end of the object code,
+    ; filling in the reference chains accordingly.
+    ld IX, (SymBot)
+Loop:
+    ld DE, SymEntrySize
+    add IX, DE
+    ld A, (IX + SymHash)
+    and A
+    jr z, Done; Zero indicates the end of the symbol table.
+    ;ret z ; We're done!
+    ld A, (IX + SymKind)
+    cp SymFwd
+    jp z, EUnresolvedLabel
+    cp SymVar
+    jr nz, Loop
+    ; This is a variable, we need to allocate space for it a the
+    ; end of the object code and fill in its reference chain.
+    call ResolveVarChain
+    jr Loop
+Done:
+    ; Set up the HEAP runtime variable.
+    ld HL, (Obj)
+    ld (RT_HEAP), HL
+    ld HL, RT_HEAP
+    ld (Obj), HL ; This is what chains get filled with.
+    ld IX, HEAPSymEntry
+    call ResolveChain
+    ret
+endp
+
+CompileNew: proc
+    ; A new identifier in this context is taken to be a forward
+    ; jump to a label define later in the program.
+    call RequireNoPendingInfixOrParens
+    ; Set up the symbol entry as a forward label reference.
+    xor A
+    ld (IX + SymLo), A
+    ld (IX + SymHi), A
+    ld A, SymFwd
+    ld (IX + SymKind), A
+    jp CompileJpUnknown
+endp
+
+CompileLdImmKnown: proc
+    ;Log("Const")
+    ld A, OpLdHLImmediate
+    call GenAKnown
+    jp GenAnyPendingInfixAndCompileNext
+endp
+
+CompileLdImmUnknown: proc
+    ;Log("Unknown")
+    ld A, OpLdHLImmediate
+    call GenAUnknown
+    jp GenAnyPendingInfixAndCompileNext
+endp
+
+CompileLdIndKnown: proc
+    ;Log("KnownVar")
+    ld A, OpLdHLIndirect
+    call GenAKnown
+    jp GenAnyPendingInfixAndCompileNext
+endp
+
+CompileLdIndUnknown: proc
+    ;Log("Var")
+    ld A, OpLdHLIndirect
+    call GenAUnknown
+    jp GenAnyPendingInfixAndCompileNext
+endp
+
+CompileJpKnown: proc
+    ;Log("JpBwd")
+    call RequireNoPendingInfixOrParens
+    ld A, OpJp
+    call GenAKnown
+    jp CompileNext
+endp
+
+CompileJpUnknown: proc
+    ;Log("JpFwd")
+    call RequireNoPendingInfixOrParens
+    ld A, OpJp
+    call GenAUnknown
+    jp CompileNext
+endp
+
+CompileCallKnown: proc
+    ;Log("Call")
+    call RequireNoPendingInfix
+    ld A, OpCall
+    call GenAKnown
+    jp CompileNext
+endp
+
+CompileAssignment: proc
+    ;Log("Assgt")
+    ; We expect the next symbol to be a new identifier or
+    ; a previously identified variable.
+    call RequireNoPendingInfixOrParens
+    call NextSymbol
+    cp SymNew
+    jp nz, AssignVar
+    ; Set up the symbol entry as a variable reference.
+    xor A
+    ld (IX + SymLo), A
+    ld (IX + SymHi), A
+    ld A, SymVar
+    ld (IX + SymKind), A
+AssignVar:
+    ;Log("StVar")
+    ld A, OpStHL
+    call GenAUnknown
+    jp CompileNext
+endp
+
+CompilePostfix: proc
+    ;Log("Postfix")
+    call RequireNoPendingInfix
+    call GenIXTemplate
+    jp CompileNext
+endp
+
+CompileInfix: proc
+    ;Log("DeferInfix")
+    ; Defer compilation of the infix operator.
+    ; Save the current accumulator value, V, in the auxiliary accumulator, U.
+    ; The next symbol has to be a variable or a value.
+    call RequireNoPendingInfix
+    ld A, OpExDEHL
+    call GenA
+    ld L, (IX + SymLo)
+    ld H, (IX + SymHi)
+    ld (PendingInfix), HL
+    jp CompileNext
+endp
+
+CompileIfZ: proc
+    ;Log("IfZ")
+    call GenTestZ
+    call NextSymbol
+    cp SymBwd
+    jr nz, IfZFwd
+    ;Log("Bwd")
+    ld A, OpJpZ
+    call GenAKnown
+    jp CompileNext
+IfZFwd:
+    cp SymNew
+    jp nz, ENotALabel
+    ;Log("Fwd")
+    ld (IX + SymKind), SymFwd ; Set the symbol kind to a forward label reference.
+    ld A, OpJpZ
+    call GenAUnknown
+    jp CompileNext
+endp
+
+CompileIfNZ: proc
+    ;Log("IfNZ")
+    call GenTestZ
+    call NextSymbol
+    cp SymBwd
+    jr nz, IfZFwd
+    ;Log("Bwd")
+    ld A, OpJpNZ
+    call GenAKnown
+    jp CompileNext
+IfZFwd:
+    cp SymNew
+    jp nz, ENotALabel
+    ;Log("Fwd")
+    ld (IX + SymKind), SymFwd ; Set the symbol kind to a forward label reference.
+    ld A, OpJpNZ
+    call GenAUnknown
+    jp CompileNext
+endp
+
+GenTestZ: proc
+    call GenInlineTemplate
+    CodeGenTemplate({ld A, L : or H})
+    ret
+endp
+
+CompileIfLT: proc
+    ;Log("IfLT")
+    call GenTestLT
+    call NextSymbol
+    cp SymBwd
+    jr nz, IfZFwd
+    ;Log("Bwd")
+    ld A, OpJpNZ
+    call GenAKnown
+    jp CompileNext
+IfZFwd:
+    cp SymNew
+    jp nz, ENotALabel
+    ;Log("Fwd")
+    ld (IX + SymKind), SymFwd ; Set the symbol kind to a forward label reference.
+    ld A, OpJpNZ
+    call GenAUnknown
+    jp CompileNext
+endp
+
+GenTestLT: proc
+    call GenInlineTemplate
+    CodeGenTemplate({bit 7, H})
+    ret
+endp
+
+CompileLabel: proc
+    ;Log("Label")
+    call RequireNoPendingInfixOrParens
+    call NextSymbol
+    cp SymNew
+    jr nz, NotNew:
+IsNew:
+    ld BC, (Obj) ; The current object code address.
+    ld (IX + SymLo), C
+    ld (IX + SymHi), B
+    ld (IX + SymKind), SymBwd
+    jp CompileNext
+NotNew:
+    cp SymFwd
+    jp nz, EExpectedNewOrFwd
+    call ResolveLabelChain
+    ld (IX + SymKind), SymBwd
+    jp CompileNext
+endp
+
+; The current symbol table entry (pointed to by IX) defines
+; a chain of references through the generated object code.
+; We can now resolve those addresses with the current object
+; code location.  (This is used when labels are defined, when
+; variables are allocated, and so forth.)
+ResolveVarChain: proc
+    call ResolveChain
+    inc BC
+    inc BC
+    ld (Obj), BC
+    ret
+endp
+ResolveLabelChain:
+ResolveChain: proc
+    ld BC, (Obj) ; This is what the chain entries resolve to.
+    ld L, (IX + SymLo)
+    ld H, (IX + SymHi)
+    ld (IX + SymLo), C
+    ld (IX + SymHi), B
+Loop:
+    ld A, L ; The chain is null terminated.
+    or H
+    ret z
+    ld E, (HL)
+    ld (HL), C
+    inc HL
+    ld D, (HL)
+    ld (HL), B
+    ex DE, HL
+    jr Loop
+endp
+
+CompileFunction: proc
+    ;Log("Lambda")
+    ; "\ x1 , ... , xn f { body }"
+    call RequireNoPendingInfixOrParens
+SaveOuterFunctionScope: ; cf. RestoreOuterFunctionScope
+    ; This allows for nested functions.
+    ld HL, (PendingInfix)
+    push HL
+    ld HL, (NestingDepths)
+    push HL
+    ld HL, (FnParamCount)
+    push HL
+    ld HL, (FnSymbol)
+    push HL
+    ld HL, (FnJpPastAddr)
+    push HL
+EnterNewFunctionScope:
+    ld HL, FnNestingDepth
+    inc (HL) ; Don't have more than 255 levels of nesting!
+    ld HL, FnParamCount
+    ld (HL), 0
+
+ExpParamOrFn: ; "\ x ..." or "\ f ..."
+    call NextSymbol
+    cp SymNew
+    jp nz, EExpectedNew
+    ;Log("Name")
+    ; Save this in case it is the function name.
+    ld (FnSymbol), IX
+    ; But assume for now that this is a parameter.
+    ld (IX + SymKind), SymVar
+
+ExpFnOrCommaOrBrace: ; "\ x , ..." or "\ x f { ... }" or "\ f { ... }"
+    call NextSymbol
+    cp SymLBrace
+    jr z, AtLBrace ; This fn has no parameters: "\ f { ... }".
+    ; At this point we know the function has at least one parameter.
+    ld HL, FnParamCount
+    inc (HL)
+    ; "\ x , ... f { ... }" or "\ x f { ... }"
+    cp SymNew
+    jr z, AtFnName ; This fn has one arg.
+    cp SymComma
+    jp nz, EFnSyntaxError
+
+AtComma:
+    ; "\ x , ... f { ... }"
+
+ExpParam: ; "\ x1 , x2 ..."
+    call NextSymbol
+    cp SymNew
+    jp nz, EExpectedNew
+    ;Log("Param")
+    ; This is definitely a parameter.
+    ld (IX + SymKind), SymVar
+    ld HL, FnParamCount
+    inc (HL)
+
+ExpFnOrComma: ; "\ x1 , x2 , ... f { ... }" or "\ x1 , x2 f { ... }"
+    call NextSymbol
+    cp SymComma
+    jr z, AtComma
+    cp SymNew
+    jp nz, EExpectedNew
+
+AtFnName:
+    ;Log("FnName")
+    ; This is the function name.
+    ld (FnSymbol), IX
+
+ExpLBrace: ; "\ [params] f { ... }"
+    call NextSymbol
+    cp SymLBrace
+    jp nz, EExpectedLBrace
+
+AtLBrace:
+    ;Log("LBrace")
+    ; Ensure the last symbol is marked as the function name.
+    ld IX, (FnSymbol)
+    ld (IX + SymKind), SymFn
+    ; We are about to enter the body of the function.
+    ; We need to compile the jump past the function
+    ; code, set the function symbol target, and generate
+    ; the function prologue.
+GenJpPast:
+    ; Generate a jump past the function definition.
+    ; We only want to execute this when we call it,
+    ; not when the program merely encounters the definition.
+    ld A, OpJp
+    call GenA
+    ld HL, (Obj)
+    ld (FnJpPastAddr), HL
+    ; Reserve two bytes for the jump target we will fill in later.
+    inc HL
+    inc HL
+    ld (Obj), HL
+    ; Fill in the function name symbol target.
+    ld IX, (FnSymbol)
+    ld (IX + SymLo), L
+    ld (IX + SymHi), H
+    ; Now we need to sort out the function prologue.
+    ;
+    ; The calling sequence for an n-ary function f is
+    ;   e1 , e2 , ... , en f
+    ; where ',' simply pushes the working accumulator, V.
+    ; This essentially compiles to
+    ;   [[ e1 ]] : push HL
+    ;   [[ e2 ]] : push HL
+    ;   ...
+    ;   [[ en ]] : call f
+    ; so the call stack looks like this:
+    ;   [[ e1 ]] [[ e2 ]] .. [[e(n-1)]] retaddr
+    ; with [[ en ]] in the working accumulator, V.
+    ;
+    ; With that in mind, the function prologues are going to
+    ; be different depending on the argument count.
+    ;
+    ; For zero parameters we do nothing!
+    ;
+    ; For one parameter we write the working accumulator V into the
+    ; parameter variable:
+    ;   ld (x1), HL
+    ;
+    ; For two or more parameters we do this:
+    ;   ld (xn), HL
+    ;   pop DE ; Save the return address.
+    ;   pop HL : ld (x(n-1)), HL
+    ;   ...
+    ;   pop HL : ld (x2), HL
+    ;   pop HL : ld (x1), HL
+    ;   push DE ; Restore the return address on the stack.
+    ;
+    ; Moreover, we need to handle naming scopes.  If we have functions,
+    ; why not allow nested functions?  This means that within the function
+    ; body the function name itself is out of scope, but all known names in
+    ; the outer scope are visible; however, after the function definition,
+    ; only the function name is in scope and all other definitions within
+    ; the function are considered local.  An easy way to arrange this is to
+    ; judiciously change the symbol table entry hashes at the right points
+    ; during compilation ensuring that no match can occur in the wrong place.
+GenFnPrologue:
+    ld A, (FnParamCount)
+GenFnZeroParamPrologue:
+    and A
+    ; Zero parameters is trivial!
+    jr Z, CompileFunctionBody
+GenFnOneParamPrologue:
+    cp 1
+    jr nz, GenFnMultiParamPrologue
+    ;Log("OneArg")
+    ; Get the address of the single parameter.
+    ; Gen write the working accumulator, V, to this.
+    ld IX, (FnSymbol)
+    ld DE, SymEntrySize
+    add IX, DE
+    ld A, OpStHL
+    call GenAUnknown
+    jr CompileFunctionBody
+GenFnMultiParamPrologue:
+    ;Log("ManyArg")
+    ; Get the address of the last parameter.
+    ; Gen write the working accumulator, V, to this.
+    ld IX, (FnSymbol)
+    ld DE, SymEntrySize
+    add IX, DE
+    ld A, OpStHL
+    call GenAUnknown
+    ; Gen storing the function return address in a temporary.
+    ld A, OpPopDE
+    call GenA
+    ; Gen popping and writing to the remaining parameters.
+    ld A, (FnParamCount)
+    dec A
+    ld B, A
+GenParamsLoop:
+    ld A, OpPopHL
+    call GenA
+    ld A, OpStHL
+    add IX, DE
+    call GenAUnknown
+    djnz GenParamsLoop
+    ; Restore the function return address.
+    ld A, OpPushDE
+    call GenA
+
+CompileFunctionBody:
+    ;Log("Body")
+    ; Smashing!  Most of the hard work is done now.
+    ; Let's just fix up the function symbol so it isn't
+    ; visible in the function body.
+    ld IX, (FnSymbol)
+    call HideSymbol
+    jp CompileNext
+
+endp
+
+CompileFunctionEpilogue: proc
+    ;Log("Ret")
+    ; Put in a finishing ret.
+    ld A, OpRet
+    call GenA
+    ; Fill in the "jump past the function" address.
+    ld DE, (Obj)
+    ld HL, (FnJpPastAddr)
+    ld (HL), E
+    inc HL
+    ld (HL), D
+    ; Now we need to hide all the local definitions in the function body.
+    ; If any labels are unresolved, that is an error.
+    ld HL, (FnSymbol) ; We work forward in symbol table after this one.
+    ld DE, SymEntrySize
+    ld IX, (SymBot)
+HideLocals:
+    add IX, DE
+    ld A, IXL
+    cp L
+    jr nz, HideLocal
+    ld A, IXH
+    cp H
+    jr z, RevealFnSymbol
+CheckLabel:
+    ; An unresolved local forward label reference is an error.
+    ld A, (IX + SymKind)
+    cp SymFwd
+    jp z, EUnresolvedLabel
+HideLocal:
+    call HideSymbol
+    jr HideLocals
+RevealFnSymbol:
+    ; The function symbol is hidden inside the function body.
+    ; Now we reveal it so it is visible in the outer scope.
+    call RevealSymbol
+    ld A, (FnParamCount)
+    and A
+    jr z, RestoreOuterFunctionScope
+    ld B, A
+HideParams:
+    add IX, DE
+    call HideSymbol
+    djnz HideParams
+RestoreOuterFunctionScope:
+    pop HL
+    ld (PendingInfix), HL
+    pop HL
+    ld (NestingDepths), HL
+    pop HL
+    ld (FnParamCount), HL
+    pop HL
+    ld (FnSymbol), HL
+    pop HL
+    ld (FnJpPastAddr), HL
+    jp CompileNext
+endp
+
+CompilePush: proc
+    ;Log("Push")
+    call RequireNoPendingInfix
+    ld A, OpPushHL
+    call GenA
+    jp CompileNext
+endp
+
+CompileLPar: proc
+    ; Save and zero any pending infix operator.
+    ld HL, (PendingInfix)
+    push HL
+    ld HL, 0
+    ld (PendingInfix), HL
+    ; Gen code to save the auxiliary accumulator, U.
+    ld A, OpPushDE
+    call GenA
+    ; Increment the parentheses nesting counter.
+    ld HL, PnNestingDepth
+    inc (HL) ; XXX Check for overflow.
+    jp CompileNext
+endp
+
+CompileRPar: proc
+    ; Decrement the parentheses nesting counter.
+    ld HL, PnNestingDepth
+    dec (HL)
+    jp v, EUnmatchedParens
+    ; Gen code to restore the auxiliary accumulator, U.
+    ld A, OpPopDE
+    call GenA
+    ; Restore and compile any pending infix operator.
+    pop HL
+    ld (PendingInfix), HL
+    jp GenAnyPendingInfixAndCompileNext
+endp
+
+CompileNYI: proc
+    jp ENYI
+endp
+
+CompileAddrOf: proc
+    ; & x -- addr of var x
+    ; & f -- addr of function f
+    ; & bwd -- addr of known label bwd
+    ; & fwd -- addr of unknown label fwd
+    ; & new -- addr of new unknown label fwd
+    call NextSymbol
+    ld B, SymVarAddr
+    cp SymVar ; & x
+    jr z, GenB
+    ld B, SymFnAddr
+    cp SymFn ; & f
+    jr z, GenB
+    ld B, SymBwdAddr
+    cp SymBwd ; & bwd
+    jr z, GenB
+    ld B, SymFwdAddr
+    cp SymFwd ; & fwd
+    jr z, GenB
+    cp SymNew ; & new
+    jp nz, EExpectedVarFnOrLabel
+    xor A
+    ld (IX + SymLo), A
+    ld (IX + SymHi), A
+    ld B, SymFwd
+    ld (IX + SymKind), B
+GenB:
+    ld A, B
+    jp CompileSymbol
+endp
+
+; This table MUST match the order defined in Symbols.asm.
+CompileKindTable: proc
+    noflow
+    dw CompileEof               ; SymEof
+    dw CompileNew               ; SymNew
+    dw CompileLdImmKnown        ; SymConst
+    dw CompileLdImmUnknown      ; SymStr
+    dw CompileLdIndUnknown      ; SymVar
+    dw CompileLdImmUnknown      ; SymVarAddr
+    dw CompileJpKnown           ; SymBwd
+    dw CompileLdImmKnown        ; SymBwdAddr
+    dw CompileJpUnknown         ; SymFwd
+    dw CompileLdImmUnknown      ; SymFwdAddr
+    dw CompileCallKnown         ; SymFn
+    dw CompileLdImmKnown        ; SymFnAddr
+    dw CompileAssignment        ; SymAssign
+    dw CompilePostfix           ; SymPostfix
+    dw CompileInfix             ; SymInfix
+    dw CompileIfZ               ; SymIfZ
+    dw CompileIfNZ              ; SymIfNZ
+    dw CompileIfLT              ; SymIfLT
+    dw CompileLabel             ; SymColon
+    dw CompileFunction          ; SymLambda
+    dw CompilePush              ; SymComma
+    dw CompileNYI               ; SymLBrace
+    dw CompileFunctionEpilogue  ; SymRBrace
+    dw CompileLPar              ; SymLPar
+    dw CompileRPar              ; SymRPar
+    dw CompileAddrOf            ; SymAmpersand
+endp
+
+; XXX TODO
+; - jump
+; - call
+; - inline machine code
+; - operators!
+

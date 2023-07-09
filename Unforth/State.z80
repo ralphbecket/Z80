@@ -1,0 +1,27 @@
+
+noflow
+
+SrcStart:       dw 0    ; Start addr of source code (null terminated).
+Src:            dw 0    ; Addr of next source code byte to read.
+
+InitialObjStart:dw $8000
+ObjStart:       dw 0    ; Start addr of object code being generated.
+Obj:            dw 0    ; Addr of next object code byte to generate.
+
+; The symbol tables (builtins and program) grow downwards in memory.
+; The end of a symbol table is marked with a zero byte.
+InitialSymEnd:  dw DisplayBitmapEnd
+SymEnd:         dw 0    ; Addr of the terminating zero of the symbol table.
+SymBot:         dw 0    ; Addr of the most recently added symbol entry.
+
+; Compiler state.
+PendingInfix:   dw 0    ; Symbol entry for deferred infix op.
+NestingDepths:  equ $
+FnNestingDepth: db 0    ; Function nesting depth.  (We just use a byte.)
+PnNestingDepth: db 0    ; Parenthesis nesting depth.  (We just use a byte.)
+FnParamCount:   dw 0    ; Function parameter count.
+FnSymbol:       dw 0    ; Symbol entry for the function name.
+FnJpPastAddr:   dw 0    ; The "jump past fn" address.
+
+; Miscellaneous state.
+SavedSP         dw 0

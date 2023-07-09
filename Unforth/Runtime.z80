@@ -1,0 +1,268 @@
+; This is where all the built-ins go that are too big to be generated in-line.
+; Some of these are cribbed from https://learn.cemetech.net/index.php/Z80:Math_Routines
+
+; Set up the environment.
+RT_Init: proc
+    ; Open the normal screen channel for output.
+    ld A, 2
+    jp $1601 ; ZX Spectrum ROM open channel.
+endp
+
+; Multiplication, HL * DE -> HL
+RT_Mul: proc
+    ; First see if we can get away with 8x16 bit multiplication.
+    ; This is common and we'd like it to be quick.
+    ld A, H
+    or A
+    jr z, Do8x16
+    ex DE, HL
+    ld A, H
+    or A
+    jr nz, Do16x16
+Do8x16:
+    ; H is zero.
+    ld A, L
+    ld L, H ; HL is zero.
+    ld B, 8
+Do8x16Loop:
+    add HL, HL
+    rla
+    jr nc, Nc8x16
+    add HL, DE
+Nc8x16:
+    djnz Do8x16Loop
+    ret
+Do16x16: ; This will wrap around.
+    ld C, L
+    ld B, H
+    ld HL, 0
+    ld A, 16
+Do16x16Loop:
+    add HL, HL
+    rl E
+    rl D
+    jr nc, Nc16x16
+    add HL, BC
+Nc16x16:
+    dec A
+    jr nz, Do16x16Loop
+    ret
+endp
+
+; Signed division, DE / HL -> HL
+RT_SDiv: proc
+    ld A, D
+    xor H
+    rlca
+    jr nc, RT_UDiv ; Both have the same sign.
+    bit 7, D
+    jr z, NegHL
+NegDE:
+    xor A : sub E : ld E, A : sbc A, A : sub D : ld D, A
+    jr DoDiv
+NegHL:
+    xor A : sub L : ld L, A : sbc A, A : sub H : ld H, A
+DoDiv:
+    call RT_UDiv
+NegResult:
+    xor A : sub L : ld L, A : sbc A, A : sub H : ld H, A
+    ret
+endp
+
+; Unsigned division, DE / HL -> HL rem DE
+RT_UDiv: proc
+    ld C, E
+    ld B, D
+    ex DE, HL
+    ; BC / DE -> BC rem HL
+    xor A
+    ld H, A
+    ld L, A
+    sub E
+    ld E, A
+    sbc A, A
+    sub D
+    ld D, A
+    ; HL = 0, DE = -DE
+    ld A, B
+    ld B, 16
+    ; A is upper 8 bits, C is lower 8 bits.
+DivLoop:
+    ; Shift result bit into AC into HL.
+    rl C : rla
+    adc HL, HL
+    ; Is the divisor greater than the
+    add HL, DE
+    jr c, DivLoopNext
+    sbc HL, DE
+DivLoopNext:
+    djnz DivLoop
+    rl C : rla
+    ld E, C
+    ld D, A
+    ex DE, HL
+    ret
+endp
+
+; Clear the screen.
+RT_Cls: proc
+    jp $0daf ; ZX Spectrum ROM CLS.
+endp
+
+; Print a carriage return.
+RT_PutNL: proc
+    ld A, 13
+    rst $10
+    ret
+endp
+
+; Print a string followed by a carriage return.
+RT_PutSNL: proc
+    call RT_PutS
+    ld A, 13
+    rst $10
+    ret
+endp
+
+; Print the NUL terminated string in HL.
+RT_PutS: proc
+    push HL
+Loop:
+    ld A, (HL)
+    and A
+    jr z, Done
+    rst $10 ; ZX Spectrum print char.
+    inc HL
+    jr Loop
+Done:
+    pop HL
+    ret
+endp
+
+; Print the unsigned decimal number in HL.
+RT_PutU: proc
+    push HL
+    push DE
+    ld E, 0 ; Bit 0 indicates we have printed a leading digit.
+    ld BC, 10000
+    call PutDigit
+    ld BC, 1000
+    call PutDigit
+    ld BC, 100
+    call PutDigit
+    ld BC, 10
+    call PutDigit
+    ld A, L
+    add '0'
+    rst $10
+Done:
+    pop DE
+    pop HL
+    ret
+PutDigit:
+    ld D, '0'
+    xor A
+Loop:
+    sbc HL, BC
+    jr c, HaveDigit
+    inc D
+    jr Loop
+HaveDigit:
+    add HL, BC
+    ld A, D
+    cp '0'
+    jr nz, PrintIt
+    bit 0, E
+    ret z ; Don't print leading zeroes.
+PrintIt:
+    rst $10
+    set 0, E
+    ret
+endp
+
+; Print the signed number in HL.
+RT_PutD: proc
+    bit 7, H
+    jr z, RT_PutU
+IsNeg:
+    ld A, '-'
+    rst $10
+    ; Negate HL.
+    push HL
+    xor A : sub L : ld L, A : sbc A, A : sub H : ld H, A
+    call RT_PutU
+    pop HL
+    ret
+endp
+
+; Print the hex byte in L.
+RT_PutXx: proc
+    ld A, L
+    call TR__PutAHi
+    ld A, L
+    jp TR__PutALo
+endp
+
+; Print the hex word in HL.
+RT_PutXxxx: proc
+    ld A, H
+    call TR__PutAHi
+    ld A, H
+    call TR__PutALo
+    ld A, L
+    call TR__PutAHi
+    ld A, L
+    jp TR__PutALo
+endp
+
+; Print the hex byte in the upper nybble of A.
+TR__PutAHi: proc
+    rrca
+    rrca
+    rrca
+    rrca
+endp
+
+; Print the hex nybble in the lower nybble of A.
+TR__PutALo: proc
+    and $0f
+    add A, $90
+    daa ; This is magic.
+    adc A, $60
+    rst $10
+    ret
+endp
+
+; Find the length of the string in HL.
+RT_StrLen: proc
+    xor A
+    ld C, A
+    ld B, A
+    ld E, L
+    ld D, H
+    cpir ; First time I've ever used this!
+    sbc HL, DE
+    ret
+endp
+
+RT_AllocWords: proc
+    add HL, HL
+endp
+
+; Allocate bytes on the heap.
+RT_AllocBytes: proc
+    ld DE, (RT_HEAP)
+    add HL, DE
+    ld (RT_HEAP), HL
+    ex DE, HL
+    ret
+endp
+
+; Perform an indirect call.
+RT_Call: proc
+    jp (HL)
+endp
+
+noflow
+RT_HEAP: dw 0
+

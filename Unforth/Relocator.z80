@@ -1,0 +1,10 @@
+; Code relocation.  This is to copy the run-time library into the generated
+; object code and update all the various address references accordingly.
+
+CopyAndRelocateRuntime: proc
+
+
+RelocTable: ; A series of pairs of <ref addr>, <addr to reloc> pairs
+            ; terminated with a zero <ref addr>.
+    dw 0
+endp

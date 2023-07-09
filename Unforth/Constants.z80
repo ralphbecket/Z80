@@ -1,0 +1,6 @@
+DummyStringCopyTgt:     equ 0       ; When parsing, we "copy" over the ROM.
+ChNL:                   equ $0d     ; Newline.
+DisplayBitmapStart:     equ $4000   ; The start of the display bitmap file.
+DisplayBitmapEnd:       equ $57ff
+DisplayAttrmapStart:    equ $5800   ; The start of the display attribute file.
+DisplayAttrmapEnd:      equ $5aff

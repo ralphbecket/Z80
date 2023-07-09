@@ -1,0 +1,150 @@
+zeusemulate "48K", "ULA+"
+org $7000
+
+ZeusEmulate_PC  equ Main
+ZeusEmulate_SP  equ $FF40
+
+
+
+Main: proc
+    call RT_Init
+    ld HL, TestObjStart
+    ld (InitialObjStart), HL
+    ld HL, TestSymEnd
+    ld (InitialSymEnd), HL
+    ld HL, TestCases
+Loop:
+    xor A
+    cp (HL)
+    jr z, Done
+    ; Print out the test case.
+    ld (SrcStart), HL
+    call RT_PutSNL : halt : halt : halt
+    ld BC, -1
+    xor A
+    cpir
+    ; Save the expected result.
+    ld E, (HL)
+    inc HL
+    ld D, (HL)
+    inc HL
+    push HL ; Save the pointer to the next test case.
+    push DE ; Save the expected result.
+    ; Clear the object code area for clarity.
+    ld HL, (ObjStart) : ld (HL), 0 : ld E, L : ld D, H : inc DE : ld BC, $100 : ldir
+    ; Compile and run the program.
+    call CompileProgram
+    call TestObjStart
+    ; Check whether we got the right result.
+    pop DE
+    xor A
+    sbc HL, DE
+    pop HL ; Restore the next text case pointer.
+    jr z, Loop
+Fail:
+    push HL
+    ld HL, FailMsg : call RT_PutS
+    ld HL, ExpectedMsg : call RT_PutS : ld HL, (TestExpectedResult) : call RT_PutD
+    ld HL, ActualMsg : call RT_PutS : pop HL : call RT_PutD
+    call RT_PutNL
+Done:
+    ld HL, DoneMsg : call RT_PutS
+    halt ; Give the Zeus emulator a chance to update the simulated display.
+    halt
+    halt
+    ret
+endp
+
+
+
+TestObjStart: equ $A000
+TestSymEnd: equ $B000
+
+TestCase: macro(srccode, expected)
+    db srccode, 0
+    dw expected
+endm
+
+noflow
+
+TestCases:
+    ;TestCase(" 10 neg + 121 ", 111)
+    ;;TestCase("111 : foo 222 foo", 111)
+    ;;TestCase("333 foo 222 : foo 111 foo", 111)
+    ;TestCase("#2b67 -> x", 11111)
+    ;TestCase("#2b66 -> x  x + 1", 11111)
+    ;TestCase(": foo & foo", TestObjStart) ; XXX Add in call to RT_Init and adjust!
+    ;TestCase("& foo : foo", TestObjStart + 3 + 1)
+    ;TestCase("0 -> x  & x -> y", TestObjStart + 3*4 + 1 + 2) ; Vars alloc in reverse order.
+    ;TestCase(": foo 111 ifz foo", 111)
+    ;TestCase(": foo 0 ifnz foo 111", 111)
+    ;TestCase("0 ifz foo 222 bar : foo 111 : bar", 111)
+    ;TestCase("111 ifnz foo 0 : foo", 111)
+    ;TestCase("\ f { 111 }  f", 111)
+    ;TestCase("\ x f { x + 10 }  101 f", 111)
+    ;TestCase("\ x , y f { x + y }  101 , 10 f", 111)
+    ;TestCase("\ x , y , z f { x + y + z }  100 , 10 , 1 f", 111)
+    ;TestCase("\ x f { x + 10 }  \ x g { x f + 100 }  1 g", 111)
+    ;TestCase("45678 putu", 45678)
+    ;TestCase("-123 neg", 123)
+    ;TestCase("-12345 putd", -12345)
+    ;TestCase("#dead putxxxx", $dead)
+    ;TestCase("#beef putxx", $beef)
+    ;TestCase("1 + 2 * 3", 9)
+    ;TestCase("1 + ( 2 * 3 )", 7)
+    ;TestCase("12345 / 100", 123)
+    ;TestCase("123 * 100", 12300)
+    ;TestCase("-123 * 100", -12300)
+    ;TestCase("123 * -100", -12300)
+    ;TestCase("-12345 / 100", -123)
+    ;TestCase("-123 * 100", -12300)
+PrimesProg:
+    db "; Calculating the primes to 100 in Unforth.", 13
+    db "", 13
+    db "100 -> n", 13
+    db "", 13
+    db "; Allocate a byte array.", 13
+    db "n bytes -> p", 13
+    db "", 13
+    db "; Set the array.", 13
+    db "p <-. 1", 13
+    db "p , n , p + 1 ldir", 13
+    db "", 13
+    db "; Clear the 0 and 1 entries.", 13
+    db "p + 0 <-. 0", 13
+    db "p + 1 <-. 0", 13
+    db "", 13
+    db "; Now we run the sieve.", 13
+    db "1 -> i", 13
+    db ": iloop", 13
+    db "i + 1 -> i", 13
+    db "i - n ifz done", 13
+    db "p + i @. ifz iloop", 13
+    db "", 13
+    db "; We have a prime!  Clear its multiples.", 13
+    db "i putd putspc", 13
+    db "i * i -> j", 13
+    db ": jloop", 13
+    db "n - j iflt iloop", 13
+    db "p + j <-. 0", 13
+    db "j + i -> j", 13
+    db "jloop", 13
+    db "", 13
+    db ": done", 13
+    db 0
+    dw 0
+    db 0 ; Done!
+
+TestExpectedResult: dw 0
+
+FailMsg:        db "ERROR!", 0
+ExpectedMsg:    db "    Expected ", 0
+ActualMsg:      db "    Actual ", 0
+DoneMsg:        db "DONE!", 0
+
+
+
+include "Unforth.z80", 13
+
+
+

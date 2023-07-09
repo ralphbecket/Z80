@@ -1,0 +1,79 @@
+
+GenBwdAddr:
+GenFnAddr:
+GenVarAddr:
+GenConst: proc
+    ld A, OpLdHLImmediate
+    jp GenAKnown
+endp
+
+GenStr:
+GenFwdAddr:
+GenVar: proc
+    ld A, OpLdHLIndirect
+    jp GenAUnknown
+endp
+
+GenBwd: proc
+    ld A, OpJp
+    jp GenAKnown
+endp
+
+GenFwd: proc
+    ld A, OpJp
+    jp GenAUnknown
+endp
+
+GenComma: proc
+    ld A, OpPushHL
+    jp GenA
+endp
+
+GenFn: proc
+    ld A, OpCall
+    jp GenAKnown
+endp
+
+GenRet: proc
+    ld A, OpRet
+    jp GenA
+endp
+
+GenIfZBwd: proc
+    ld HL, TestZeroTemplate
+    call GenHLTemplate
+    ld A, OpJpZ
+    jp GenAKnown
+endp
+
+GenIfNZBwd: proc
+    ld HL, TestZeroTemplate
+    call GenHLTemplate
+    ld A, OpJpNZ
+    jp GenAKnown
+endp
+
+GenIfZFwd: proc
+    ld HL, TestZeroTemplate
+    call GenHLTemplate
+    ld A, OpJpZ
+    jp GenAUnknown
+endp
+
+GenIfNZFwd: proc
+    ld HL, TestZeroTemplate
+    call GenHLTemplate
+    ld A, OpJpNZ
+    jp GenAUnknown
+endp
+
+GenStore: proc
+    ld A, OpStHL
+    jp GenAUnknown
+endp
+
+TestZeroTemplate: CodeGenTemplate({
+    ld A, L
+    or H
+})
+

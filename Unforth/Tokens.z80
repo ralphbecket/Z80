@@ -1,0 +1,250 @@
+
+; Skip whitespace and comments (semicolon to end-of-line) then
+; read the next token from the source code, filling out the
+; fields of the waiting symbol table entry pointed to by IX,
+; returning the kind in A (the kind is either SymEof or SymNew
+; or SymStr for a string --
+; it is up to the symbol table to refine the kind and IX by
+; looking for an appropriate match).
+
+NextToken: proc
+    ld HL, (Src)
+    dec HL
+    ld IX, (SymBot)  ; This is the next *free* symbol entry.
+SkipWS:
+    ; Skip whitespace, looking out for EOF and comments.
+    inc HL
+    ld A, (HL)
+    and A
+    jr z, AtEof
+    cp ' '+1 ; Anything space or below in ASCII.
+    jr c, SkipWS
+    cp ';' ; Is this the start of a comment?
+    jr z, InComment
+    cp '"' ; Is this the start of a string?
+    jr nz, AtToken
+AtString:
+    ; Just skip over everything until we get to a matching
+    ; closing quote, skipping over backslash escape sequences.
+    ; Valid escape sequences are \", \n, and \xx where xx is
+    ; a two-digit hexadecimal number.
+    ld (IX + SymSrcLo), L
+    ld (IX + SymSrcHi), H
+    ld DE, DummyStringCopyTgt
+    call ParseString ; Skip over the string, "copying" it into ROM.
+    ld A, SymStr
+    ld (IX + SymKind), A
+    ret
+InComment:
+    ; Skip to end of line or EOF.
+    ld A, (HL)
+    cp ChNL
+    jr z, SkipWS
+    and A
+    jr z, AtEof
+    inc HL
+    jr InComment
+AtEof:
+    ; A is zero.
+    ld (Src), HL
+    ld (IX + SymHash), A
+    ld (IX + SymKind), A
+    ret
+AtToken:
+    ld (IX + SymSrcLo), L
+    ld (IX + SymSrcHi), H
+    ld BC, 0 ; B is hash, C is token length.
+InToken:
+    ; Scan ahead to the next whitespace character or EOF,
+    ; calculating the lookup hash as we go.
+    ld A, (HL)
+    cp ' '+1
+    jr c, Done
+    rl B ; Add the new character to the hash.
+    adc B
+    ld B, A
+    inc C ; Increment the length counter.
+    inc HL
+    jr InToken
+Done:
+    ld (Src), HL
+    ld (IX + SymHash), B
+    ld (IX + SymLen), C
+    ld A, SymNew
+    ld (IX + SymKind), A
+    ret
+endp
+
+; Parse a double-quote delimited string starting at HL, copying the
+; parsed string to DE.  The parsed string is null (0) terminated.
+; Escape sequences are:
+; \"    -- a literal double-quote;
+; \\    -- a literal backslash;
+; \n    -- a newline character (ASCII code 13);
+; \xx   -- a character with hexadecimal code xx (e.g., \n is the same as \0d).
+ParseString: proc
+    inc HL ; Skip the leading double-quote.
+InString:
+    ld A, (HL)
+    inc HL
+    cp '"'
+    jr z, Done
+    cp '\'
+    jr z, AtEsc
+    and A
+    jp z, EUnexpectedEof
+CopyChar:
+    ld (DE), A
+    inc DE
+    jr InString
+Done:
+    xor A
+    ld (DE), A
+    ret
+AtEsc:
+    ; We've just hit a backslash.
+    ld A, (HL)
+    inc HL
+    cp '\'
+    jr z, CopyChar
+    cp '"'
+    jr z, CopyChar
+    cp 'n'
+    jr nz, AtXxEscape
+    ld A, 13 ; ASCII newline code.
+    jr CopyChar
+AtXxEscape:
+    call ParseHexDigit
+    jp nc, EBadEscapeSequence
+    add A, A
+    add A, A
+    add A, A
+    add A, A
+    ld C, A
+    ld A, (HL)
+    inc HL
+    call ParseHexDigit
+    jp nc, EBadEscapeSequence
+    add A, C
+    jr CopyChar
+
+ParseHexDigit:
+    sub '0'
+    jp c, EBadEscapeSequence
+    cp 10
+    ret c
+    sub 'A'-10
+    jp c, EBadEscapeSequence
+    cp 16
+    ret c
+    sub 'a'-'A'
+    jp c, EBadEscapeSequence
+    cp 16
+    ret c
+    jp EBadEscapeSequence
+
+endp
+
+; Parse a decimal or hexadecmial constant pointed to by HL.
+; These constants have optional leading '-' sign,
+; followed by a '#' sign for hexadecimal constants,
+; followed by digits in the appropriate base.
+; On success, the carry flag is set and the result is in HL.
+; Overflow is not detected.
+ParseConst: proc
+    ex DE, HL ; Put the source code address in DE.
+    ld HL, 0 ; HL will hold our result.
+    ld B, L ; 1 if we need to negate the number.
+    ld A, (DE)
+    cp '-'
+    jr nz, TryHex
+    inc B ; 1 -- negate the result.
+    inc DE
+TryHex:
+    ld A, (DE)
+    cp '#'
+    jr nz, ParseDecConst
+    inc DE
+    ld A, (DE)
+ParseHexConst:
+    call ConvertHexDigit
+    ret nc ; This is not a syntactically valid hex constant.
+    ; Include the new hex digit in our result.
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    add HL, HL
+    add A, L
+    ld L, A
+    inc DE
+    ld A, (DE)
+    cp ' '+1
+    jr nc, ParseHexConst
+    jr MaybeNeg
+ParseDecConst:
+    sub '0'
+    ccf
+    ret nc ; This is not a syntactically valid decimal constant.
+    cp 10
+    ret nc ; This is not a syntactically valid decimal constant.
+    ; Include the new decimal digit in our result.
+    ; This is an awkward bit of code to calculate 10HL + A.
+    push DE ; HL = 10 * HL
+    add HL, HL
+    ld E, L
+    ld D, H
+    add HL, HL
+    add HL, HL
+    add HL, DE
+    add A, L ; HL += A
+    ld L, A
+    adc A, H
+    sub A, L
+    ld H, A
+    pop DE
+    inc DE
+    ld A, (DE)
+    cp ' '+1
+    jr nc, ParseDecConst
+MaybeNeg:
+    dec B
+    scf ; Carry flag indicates success.
+    ret nz ; B was 0, we don't need to negate the constant.
+    ex DE, HL ; HL = -HL
+    xor A
+    ld L, A
+    ld H, A
+    sbc HL, DE
+    scf ; Carry flag indicates success.
+    ret
+endp
+
+; Convert an ASCII character in A into a hexadecimal digit.
+; On success, the carry flag is set and the result is in A.
+ConvertHexDigit: proc
+    sub '0' ; Is this 0..9?
+    ccf
+    ret nc ; Fail if less than '0'.
+    cp 10
+    ret c ; Succeed if 0..9.
+    sub 'A'-'0'-10 ; Is this A..F?
+    ccf
+    ret nc ; Fail if less than 'A'.
+    cp 16
+    ret c ; Succeed if A..F.
+    sub 'a'-'A' ; Is this a..f?
+    ccf
+    ret nc ; Fail if less than 'a'.
+    cp 16 ; Succeed if a..f.
+    ret
+endp
+
+; Convert an ASCII character in A into a decimal digit.
+; On success, the carry flag is set and the result is in A.
+ConvertDecimalDigit: proc
+    sub '0'
+    ccf
+    ret nc
+    cp 10
+    ret
+endp

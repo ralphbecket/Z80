@@ -1,0 +1,53 @@
+Unforth Grammar
+===============
+
+Key
+---
+
+`123` denotes a numerical constant;
+`x` denotes a variable name;
+`bwd` denotes a backward (i.e., known) label reference;
+`fwd` denotes a forward (i.e., unknown) label reference;
+`f` denotes a previously defined (i.e., known) function name;
+`new` denotes a new (i.e., unknown) identifier.
+
+Tokens
+------
+
+Program source code is a sequence of tokens.  Each token is a non-empty
+sequence of non-whitespace characters surrounded by whitespace.  A comment
+counts as whitespace and starts with a '`' and extends to the end of the
+line.
+
+The source code is terminated by an ASCII NUL character (i.e., code 0).
+
+Notable tokens
+--------------
+'`' introduces a comment that extends to the end of the line;
+':' introduces a label;
+'&' introduces an "address-of" expression;
+'(' and ')' bracket a sub-expression;
+'[' and ']' bracket the parameter list for a new function definition;
+'"..."' denotes a string constant.
+
+Example Program
+---------------
+
+[ x y ] gcd
+    : loop  x - y       ifz done    iflt xlty
+    : yltx  -> x        loop
+    : xlty  neg -> y    loop
+    : done  x
+end
+
+18 , 12 gcd
+
+Compiler Pseudocode
+-------------------
+
+Compile:
+    ScanSym (Sets Sym, SymKind, Sym.Value may be a constant value)
+    Switch SymKind:
+        SymConst:   GenConst
+:w
+
